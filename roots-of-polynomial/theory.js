@@ -588,7 +588,7 @@ var sortRoots = () => {
         return result;
     }
 
-    sortedRoots = [ 0, 1, 2, 3, 4, 5 ];
+    sortedRoots = [ 0, 1, 2, 3, 4 ];
 
     if (polynomialDegree >= 5 && a5HypopMs.level >= 1) {
         const goal = ONE_ZERO;
