@@ -273,7 +273,7 @@ var polynomialDegree;
 var rhodot;
 
 // Balancing
-var pubPower = 0.1;
+var pubPower = 0.2;
 var tauRate = 0.4;
 var pubExp = pubPower / tauRate;
 var getTau = () => currency.value.pow(tauRate);
@@ -284,74 +284,60 @@ var getPublicationMultiplierFormula = (symbol) => `${symbol}^{${pubExp}}`;
 var a0;
 var a0Cost = new FirstFreeCost(new ExponentialCost(10, Math.log2(15)));
 var getA0 = (level) => level == 0 ? BigNumber.ZERO : -BigNumber.TWO.pow(level - 1);
-var getA0Desc = (level) => {
-    return Utils.getMath(level == 0 ? `a_0=0` : `a_0=-2^{${level - 1}}`);
-};
-var getA0Info = (level, amount) => {
-    return Utils.getMathTo(level == 0 ? `a_0=0` : `a_0=${getA0(level).toString(0)}`, `a_0=${getA0(level + amount).toString(0)}`);
-};
+var getA0Desc = (level) => level == 0 ? `a_0=0` : `a_0=-2^{${level - 1}}`;
+var getA0Info = (level) => level == 0 ? `a_0=0` : `a_0=${getA0(level).toString(0)}`;
 
 var a1;
 var a1Cost = new ExponentialCost(50, Math.log2(4));
 var getA1 = (level) => Utils.getStepwisePowerSum(level, 3, 2, 1);
-var getA1Desc = (level) => {
-    return Utils.getMath(`a_1=${getA1(level).toString(0)}`);
-};
-var getA1Info = (level, amount) => {
-    return Utils.getMathTo(`a_1=${getA1(level).toString(0)}`, `a_1=${getA1(level + amount).toString(0)}`);
-};
+var getA1Desc = (level) => `a_1=${getA1(level).toString(0)}`;
+var getA1Info = (level) => `a_1=${getA1(level).toString(0)}`;
 
 var a2;
 var a2Cost = new ExponentialCost(25, Math.log2(30));
 var getA2 = (level) => {
     if (level == 0) return BigNumber.ZERO;
-
     if (polynomialDegree >= 3) {
-        return 1 - BigNumber.THREE.pow(-level);
+        return BigNumber.ONE - BigNumber.THREE.pow(-level);
     }
     return BigNumber.TWO.pow(-level);
 };
 var getA2Desc = (level) => {
-    if (level == 0) return Utils.getMath(`a_2=0`);
+    if (level == 0) return `a_2=0`;
     if (polynomialDegree >= 3) {
-        return Utils.getMath(`a_2=1-3^{-${level}}`);
+        return `a_2=1-3^{-${level}}`;
     }
-    return Utils.getMath(`a_2=2^{-${level}}`);
+    return `a_2=2^{-${level}}`;
 };
-var getA2Info = (level, amount) => {
-    let left;
-    let right;
-
+var getA2Info = (level) => {
+    let result;
     if (level == 0) {
-        left = `a_2=0`;
+        result = `a_2=0`;
     } else if (polynomialDegree >= 3) {
-        left = `a_2=1-1/${BigNumber.THREE.pow(level).toString(0)}`;
+        result = `a_2=1-1/${BigNumber.THREE.pow(level).toString(0)}`;
     } else {
-        left = `a_2=1/${BigNumber.TWO.pow(level).toString(0)}`;
+        result = `a_2=1/${BigNumber.TWO.pow(level).toString(0)}`;
     }
-
-    if (polynomialDegree >= 3) {
-        right = `a_2=1-1/${BigNumber.THREE.pow(level + amount).toString(0)}`;
-    } else {
-        right = `a_2=1/${BigNumber.TWO.pow(level + amount).toString(0)}`;
-    }
-
-    return Utils.getMathTo(left, right);
+    return result;
 }
 
 var a3;
 var a3Cost = new ExponentialCost(1000, Math.log2(120));
 var getA3 = (level) => level == 0 ? BigNumber.ZERO : 0.075 * BigNumber.THREE.pow(-level);
-var getA3Desc = (level) => Utils.getMath(level == 0 ? `a_3=0` : `a_3=0.075 \\cdot 3^{-${level}}`);
-var getA3Info = (level, amount) => Utils.getMathTo(level == 0 ? `a_3=0` : `a_3=0.075 \\cdot 1/${(BigNumber.ONE / getA3(level) * 0.075).toString(0)}`, `a_3=0.075 \\cdot 1/${(BigNumber.ONE / getA3(level + amount) * 0.075).toString(0)}`);
+var getA3Desc = (level) => level == 0 ? `a_3=0` : `a_3=0.075 \\cdot 3^{-${level}}`;
+var getA3Info = (level) => level == 0 ? `a_3=0` : `a_3=0.075 \\cdot 1/${(BigNumber.ONE / getA3(level) * 0.075).toString(0)}`;
 
 var a4;
 var a4Cost = new ExponentialCost(BigNumber.from("1e125"), BigNumber.from("1.25e25").log2());
 var getA4 = (level) => BigNumber.from(level).pow(0.5) / 8;
+var getA4Desc = (level) => `a_4=${getA4(level).toString(3)}`;
+var getA4Info = (level) => `a_4=\\sqrt{${level}}/8`;
 
 var a5;
 var a5Cost = new ExponentialCost(BigNumber.from("1e500"), BigNumber.from("5e100").log2());
 var getA5 = (level) => BigNumber.from(level).pow(0.25) / 16;
+var getA5Desc = (level) => `a_5=${getA5(level).toString(4)}`;
+var getA5Info = (level) => `a_5=\\sqrt[4]{${level}}/16`;
 
 // Permanent Upgrades
 var maxPolynomialDegreePerma;
@@ -359,7 +345,7 @@ var a4HypopMs, a5HypopMs;
 
 // Checkpoint Upgrades
 var milestoneCost = new CustomCost(level => {
-    return BigNumber.from(25 * level);
+    return 10 + BigNumber.from(25 * level);
 });
 
 const rootSolvers = [
@@ -487,8 +473,8 @@ var init = () => {
     // a0
     {
         a0 = theory.createUpgrade(0, currency, a0Cost);
-        a0.getDescription = (_) => getA0Desc(a0.level);
-        a0.getInfo = (amount) => getA0Info(a0.level, amount);
+        a0.getDescription = (_) => Utils.getMath(getA0Desc(a0.level));
+        a0.getInfo = (amount) => Utils.getMathTo(getA0Info(a0.level), getA0Info(a0.level + amount));
         a0.boughtOrRefunded = (_) => {
             theory.invalidatePrimaryEquation();
             polynomialDegree = Math.max(polynomialDegree, 0);
@@ -499,8 +485,8 @@ var init = () => {
     // a1
     {
         a1 = theory.createUpgrade(1, currency, a1Cost);
-        a1.getDescription = (_) => getA1Desc(a1.level);
-        a1.getInfo = (amount) => getA1Info(a1.level, amount);
+        a1.getDescription = (_) => Utils.getMath(getA1Desc(a1.level));
+        a1.getInfo = (amount) => Utils.getMathTo(getA1Info(a1.level), getA1Info(a1.level + amount));
         a1.boughtOrRefunded = (_) => {
             theory.invalidatePrimaryEquation();
             polynomialDegree = Math.max(polynomialDegree, 1);
@@ -511,8 +497,8 @@ var init = () => {
     // a2
     {
         a2 = theory.createUpgrade(2, currency, a2Cost);
-        a2.getDescription = (_) => getA2Desc(a2.level);
-        a2.getInfo = (amount) => getA2Info(a2.level, amount);
+        a2.getDescription = (_) => Utils.getMath(getA2Desc(a2.level));
+        a2.getInfo = (amount) => Utils.getMathTo(getA2Info(a2.level), getA2Info(a2.level + amount));
         a2.boughtOrRefunded = (_) => {
             theory.invalidatePrimaryEquation();
             polynomialDegree = Math.max(polynomialDegree, 2);
@@ -523,8 +509,8 @@ var init = () => {
     // a3
     {
         a3 = theory.createUpgrade(3, currency, a3Cost);
-        a3.getDescription = (_) => getA3Desc(a3.level);
-        a3.getInfo = (amount) => getA3Info(a3.level, amount);
+        a3.getDescription = (_) => Utils.getMath(getA3Desc(a3.level));
+        a3.getInfo = (amount) => Utils.getMathTo(getA3Info(a3.level), getA3Info(a3.level + amount));
         a3.boughtOrRefunded = (_) => {
             theory.invalidatePrimaryEquation();
             polynomialDegree = Math.max(polynomialDegree, 3);
@@ -534,10 +520,9 @@ var init = () => {
 
     // a4
     {
-        let getDesc = (level) => "a_4=" + getA4(level).toString();
         a4 = theory.createUpgrade(4, currency, a4Cost);
-        a4.getDescription = (_) => Utils.getMath(getDesc(a4.level));
-        a4.getInfo = (amount) => Utils.getMathTo(getDesc(a4.level), getDesc(a4.level + amount));
+        a4.getDescription = (_) => Utils.getMath(getA4Desc(a4.level));
+        a4.getInfo = (amount) => Utils.getMathTo(getA4Info(a4.level), getA4Info(a4.level + amount));
         a4.boughtOrRefunded = (_) => {
             theory.invalidatePrimaryEquation();
             polynomialDegree = Math.max(polynomialDegree, 4);
@@ -547,10 +532,9 @@ var init = () => {
 
     // a5
     {
-        let getDesc = (level) => "a_5=" + getA5(level).toString();
         a5 = theory.createUpgrade(5, currency, a5Cost);
-        a5.getDescription = (_) => Utils.getMath(getDesc(a5.level));
-        a5.getInfo = (amount) => Utils.getMathTo(getDesc(a5.level), getDesc(a5.level + amount));
+        a5.getDescription = (_) => Utils.getMath(getA5Desc(a5.level));
+        a5.getInfo = (amount) => Utils.getMathTo(getA5Info(a5.level), getA5Info(a5.level + amount));
         a5.boughtOrRefunded = (_) => {
             theory.invalidatePrimaryEquation();
             polynomialDegree = Math.max(polynomialDegree, 5);
@@ -701,7 +685,7 @@ var sortRoots = (polynomialDegree, roots, a4HypopMsLevel, a5HypopMsLevel) => {
 
     if (polynomialDegree >= 2) {
         let leastIndex = 0;
-        if (roots[leastIndex].add(1).abs().compare(roots[1].add(1).abs()) >= 0) leastIndex = 1;
+        if (polynomialDegree >= 2 && roots[leastIndex].add(1).abs().compare(roots[1].add(1).abs()) >= 0) leastIndex = 1;
         if (polynomialDegree >= 3 && roots[leastIndex].add(1).abs().compare(roots[2].add(1).abs()) >= 0) leastIndex = 2;
         if (polynomialDegree >= 4 && a4HypopMsLevel == 0 && roots[leastIndex].add(1).abs().compare(roots[3].add(1).abs()) >= 0) leastIndex = 3;
         if (polynomialDegree >= 5 && a5HypopMsLevel == 0 && roots[leastIndex].add(1).abs().compare(roots[4].add(1).abs()) >= 0) leastIndex = 4;
