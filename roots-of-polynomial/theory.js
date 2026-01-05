@@ -4,6 +4,26 @@ import { BigNumber } from "./api/BigNumber";
 import { theory } from "./api/Theory";
 import { Utils } from "./api/Utils";
 
+import { Aspect } from "./api/ui/properties/Aspect";
+import { ClearButtonVisibility } from "./api/ui/properties/ClearButtonVisibility";
+import { Color } from "./api/ui/properties/Color";
+import { CornerRadius } from "./api/ui/properties/CornerRadius";
+import { Easing } from "./api/ui/properties/Easing";
+import { FontAttributes } from "./api/ui/properties/FontAttributes";
+import { FontFamily } from "./api/ui/properties/FontFamily";
+import { ImageSource } from "./api/ui/properties/ImageSource";
+import { Keyboard } from "./api/ui/properties/Keyboard";
+import { LayoutOptions } from "./api/ui/properties/LayoutOptions";
+import { LineBreakMode } from "./api/ui/properties/LineBreakMode";
+import { ReturnType } from "./api/ui/properties/ReturnType";
+import { ScrollBarVisibility } from "./api/ui/properties/ScrollBarVisibility";
+import { ScrollOrientation } from "./api/ui/properties/ScrollOrientation";
+import { TextAlignment } from "./api/ui/properties/TextAlignment";
+import { TextDecorations } from "./api/ui/properties/TextDecorations";
+import { Thickness } from "./api/ui/properties/Thickness";
+import { TouchEvent } from "./api/ui/properties/TouchEvent";
+import { TouchType } from "./api/ui/properties/TouchType";
+
 class TypeUtils {
     static isBigNumber(value) {
         return value.depth !== undefined;
@@ -47,7 +67,7 @@ class BigComplexNumber {
         BigComplexNumber.NINE_ZERO = new BigComplexNumber(9, 0);
         BigComplexNumber.TWENTY_SEVEN_ZERO = new BigComplexNumber(27, 0);
         BigComplexNumber.ONE_HUNDRED_EIGHT_ZERO = new BigComplexNumber(108, 0);
-        BigComplexNumber.PRIMITIVE_CBRT_OF_UNITY = this.NEGATIVE_ONE_ZERO.add(this.NEGATIVE_THREE_ZERO.sqrt()).div(this.TWO_ZERO);
+        BigComplexNumber.PRIMITIVE_CBRT_OF_UNITY = new BigComplexNumber(-0.5, BigNumber.THREE.sqrt() / 2);
         BigComplexNumber.PRIMITIVE_CBRT_OF_UNITY_POW_2 = this.PRIMITIVE_CBRT_OF_UNITY.mul(this.PRIMITIVE_CBRT_OF_UNITY);
     }
 
@@ -115,7 +135,7 @@ class BigComplexNumber {
         }
 
         const rp = this.realPart * other.realPart - this.imaginaryPart * other.imaginaryPart;
-        const ip = this.imaginaryPart * other.realPart + this.realPart * other.imaginaryPart;
+        const ip = other.realPart * this.imaginaryPart + other.imaginaryPart * this.realPart;
         return new BigComplexNumber(rp, ip);
     }
 
@@ -147,25 +167,22 @@ class BigComplexNumber {
             return BigComplexNumber.ZERO_ZERO;
         }
 
-        const a = this.realPart.toNumber();
-        const b = this.imaginaryPart.toNumber();
-        const c = (typeof(other) == 'number' || TypeUtils.isBigNumber(other)) ? other : other.realPart;
-        const d = (typeof(other) == 'number' || TypeUtils.isBigNumber(other)) ? 0 : other.imaginaryPart;
+        if (typeof(other) == 'number' || TypeUtils.isBigNumber(other)) {
+            const magnitude = this.magnitude().pow(other);
+            const theta = this.arg() * other;
+            return BigComplexNumber.fromPolar(magnitude, theta);
+        }
 
         const rho = this.magnitude();
         if (rho == 0) return BigComplexNumber.ZERO_ZERO;
-
-        const theta = Math.atan2(b, a);
-        const newRho = c * theta + d * rho.log();
-        const t = rho.pow(c) * Math.exp(-d * theta);
-
-        const rp = t * (newRho instanceof BigNumber ? newRho.cos() : Math.cos(newRho));
-        const ip = t * (newRho instanceof BigNumber ? newRho.sin() : Math.sin(newRho));
-        return new BigComplexNumber(rp, ip);
+        const theta = Math.atan2(this.imaginaryPart, this.realPart);
+        const newTheta = other.realPart * theta + other.imaginaryPart * rho.log();
+        const newMagnitude = rho.pow(other.realPart) * (-other.imaginaryPart * theta).exp();
+        return BigComplexNumber.fromPolar(newMagnitude, newTheta);
     }
 
     ln() {
-        return new BigComplexNumber(this.realPart.abs().log(), this.arg());
+        return new BigComplexNumber(this.magnitude().log(), this.arg());
     }
 
     log(base) {
@@ -191,12 +208,18 @@ class BigComplexNumber {
         return BigComplexNumber.ONE_ZERO.sub(this.pow(BigComplexNumber.TWO_ZERO)).sqrt().add(BigComplexNumber.ZERO_ONE.mul(this)).ln().mul(BigComplexNumber.ZERO_NEGATIVE_ONE);
     }
 
+    atan() {
+        return BigComplexNumber.TWO_ZERO.mul(BigComplexNumber.ZERO_ONE).reciprocal().mul(BigComplexNumber.ZERO_ONE.add(this).div(BigComplexNumber.ZERO_ONE.sub(this)).ln());
+    }
+
     sqrt() {
-        return this.pow(BigComplexNumber.POINT_FIVE_ZERO);
+        return this.pow(0.5);
     }
 
     cbrt() {
-        return this.pow(BigComplexNumber.POINT_THREE_REPEATING_ZERO);
+        const magnitude = Math.cbrt(this.magnitude().toNumber());
+        const theta = this.arg() / 3 + Math.PI / 3;
+        return BigComplexNumber.fromPolar(magnitude, theta);
     }
 
     isZero() {
@@ -238,11 +261,19 @@ class BigComplexNumber {
 
     toLatexString() {
         const manualToString = (value) => {
-            return value.toString(1, 2, Rounding.NEAREST);
+            if (value.sign == 0) return `0.0`;
+
+            value = value.abs();
+            const str = value.toString(1, 0, Rounding.NEAREST);
+            const digits = value.log10().floor();
+            if (digits >= 2) return `${str[0]}e${Math.floor(digits)}`;
+            return str;
         }
 
-        let result = manualToString(this.realPart);
-        if (this.imaginaryPart >= 0) result += `+`;
+        let result = ``;
+        if (this.realPart.sign == -1) result += `-`;
+        result += manualToString(this.realPart);
+        if (this.imaginaryPart.sign >= 0) result += `+`; else result += `-`;
         result += manualToString(this.imaginaryPart);
         result += `i`;
         return result;
@@ -253,7 +284,9 @@ class BigComplexNumber {
     }
 
     static fromStringified(string) {
+        if (string == undefined) return undefined;
         const split = string.split(' ');
+        if (split.length != 2) return undefined;
         const rp = BigNumber.fromBase64String(split[0]);
         const ip = BigNumber.fromBase64String(split[1]);
         return new BigComplexNumber(rp, ip);
@@ -267,86 +300,158 @@ var authors = "BasicallyIAmFox";
 var version = 2;
 
 var currency;
-var quaternaryEntries;
-var computedRoots, sortedRoots, recomputeRoots;
-var polynomialDegree;
 var rhodot;
 
+var computedRoots, sortedRoots, recomputeRoots;
+var computedDiscriminants;
+var polynomialDegree;
+
+var stage = 0;
+var quaternaryEntries;
+
 // Balancing
-var pubPower = 0.2;
+var pubPower = 0.1;
 var tauRate = 0.4;
 var pubExp = pubPower / tauRate;
 var getTau = () => currency.value.pow(tauRate);
+var getCurrencyFromTau = (tau) => [tau.max(BigNumber.ONE).pow(1 / tauRate), currency.symbol];
 var getPublicationMultiplier = (tau) => tau.pow(pubExp);
 var getPublicationMultiplierFormula = (symbol) => `${symbol}^{${pubExp}}`;
+
+var testGetE5Rho;
+var testSkip1hour;
+var testHideTests;
 
 // Regular Upgrades
 var a0;
 var a0Cost = new FirstFreeCost(new ExponentialCost(10, Math.log2(15)));
-var getA0 = (level) => level == 0 ? BigNumber.ZERO : -BigNumber.TWO.pow(level - 1);
-var getA0Desc = (level) => level == 0 ? `a_0=0` : `a_0=-2^{${level - 1}}`;
-var getA0Info = (level) => level == 0 ? `a_0=0` : `a_0=${getA0(level).toString(0)}`;
+var getA0 = (level, pd) => {
+    if (level == 0) return BigNumber.ZERO;
+
+    return -BigNumber.TWO.pow(level - 1);
+};
+var getA0Desc = (level) => {
+    if (level == 0) return `a_0=0`;
+
+    return `a_0=-2^{${(level - 1).toFixed(2)}}`;
+};
+var getA0Info = (level) => {
+    if (level == 0) return `a_0=0`;
+
+    return `a_0=${getA0(level).toString(0)}`;
+}
 
 var a1;
-var a1Cost = new ExponentialCost(50, Math.log2(4));
-var getA1 = (level) => Utils.getStepwisePowerSum(level, 3, 2, 1);
-var getA1Desc = (level) => `a_1=${getA1(level).toString(0)}`;
-var getA1Info = (level) => `a_1=${getA1(level).toString(0)}`;
+var a1Cost = new ExponentialCost(50, Math.log2(8));
+var getA1 = (level, pd) => {
+    return Utils.getStepwisePowerSum(level, 3, 2, 1);
+}
+var getA1Desc = (level) => {
+    return `a_1=${getA1(level).toString(0)}`;
+};
+var getA1Info = (level) => {
+    return `a_1=${getA1(level).toString(0)}`;
+};
 
 var a2;
 var a2Cost = new ExponentialCost(25, Math.log2(30));
-var getA2 = (level) => {
+var getA2 = (level, pd) => {
     if (level == 0) return BigNumber.ZERO;
-    if (polynomialDegree >= 3) {
-        return BigNumber.ONE - BigNumber.THREE.pow(-level);
+
+    if ((pd || polynomialDegree) >= 3) {
+        return -(BigNumber.THREE * getA1(a1.level, pd).sqrt()).pow(level / (level + 1.5));
     }
     return BigNumber.TWO.pow(-level);
 };
 var getA2Desc = (level) => {
     if (level == 0) return `a_2=0`;
+
     if (polynomialDegree >= 3) {
-        return `a_2=1-3^{-${level}}`;
+        return `a_2=-{${(BigNumber.THREE * getA1(a1.level).sqrt()).toString(2)}}^{${(level / (level + 1.5)).toFixed(4)}}`;
     }
     return `a_2=2^{-${level}}`;
 };
 var getA2Info = (level) => {
-    let result;
-    if (level == 0) {
-        result = `a_2=0`;
-    } else if (polynomialDegree >= 3) {
-        result = `a_2=1-1/${BigNumber.THREE.pow(level).toString(0)}`;
-    } else {
-        result = `a_2=1/${BigNumber.TWO.pow(level).toString(0)}`;
+    if (level == 0) return `a_2=0`;
+
+    if (polynomialDegree >= 3) {
+        return `a_2=${getA2(level).toString(2)}`;
     }
-    return result;
-}
+    return `a_2=1/${BigNumber.TWO.pow(level).toString(0)}`;
+};
 
 var a3;
-var a3Cost = new ExponentialCost(1000, Math.log2(120));
-var getA3 = (level) => level == 0 ? BigNumber.ZERO : 0.075 * BigNumber.THREE.pow(-level);
-var getA3Desc = (level) => level == 0 ? `a_3=0` : `a_3=0.075 \\cdot 3^{-${level}}`;
-var getA3Info = (level) => level == 0 ? `a_3=0` : `a_3=0.075 \\cdot 1/${(BigNumber.ONE / getA3(level) * 0.075).toString(0)}`;
+var a3Cost = new ExponentialCost(1000, Math.log2(180));
+var getA3 = (level, pd) => {
+    if (level == 0) return BigNumber.ZERO;
+
+    if ((pd || polynomialDegree) >= 4) {
+        return BigNumber.THREE.pow(Math.pow(level, 0.9) / 2);
+    }
+    return 0.075 * BigNumber.THREE.pow(-Math.pow(level, 0.9));
+};
+var getA3Desc = (level) => {
+    if (level == 0) return `a_3=0`;
+
+    if (polynomialDegree >= 4) {
+        return `a_3=3^{${(Math.pow(level, 0.9) / 2).toFixed(2)}}`;
+    }
+    return `a_3=0.075 \\cdot 3^{-${BigNumber.from(level).pow(0.9).toString(2)}}`;
+};
+var getA3Info = (level) => {
+    if (level == 0) return `a_3=0`;
+
+    if (polynomialDegree >= 4) {
+        return `a_3=${getA3(level).toString(2)}`;
+    }
+    return `a_3=1/${(BigNumber.ONE / getA3(level)).toString(2)}`;
+};
 
 var a4;
-var a4Cost = new ExponentialCost(BigNumber.from("1e125"), BigNumber.from("1.25e25").log2());
-var getA4 = (level) => BigNumber.from(level).pow(0.5) / 8;
-var getA4Desc = (level) => `a_4=${getA4(level).toString(3)}`;
-var getA4Info = (level) => `a_4=\\sqrt{${level}}/8`;
+var a4Cost = new ExponentialCost(BigNumber.from("1e120"), BigNumber.from("3.5e5").log2());
+var getA4 = (level, pd) => {
+    if (level == 0) return BigNumber.ZERO;
+
+    return BigNumber.FOUR.pow(1 + 0.1 * level);
+};
+var getA4Desc = (level) => {
+    if (level == 0) return `a_4=0`;
+
+    return `a_4=${getA4(level).toString(2)}`;
+};
+var getA4Info = (level) => {
+    if (level == 0) return `a_4=0`;
+
+    return `a_4=4^{${(1 + 0.1 * level).toFixed(1)}}`
+};
 
 var a5;
 var a5Cost = new ExponentialCost(BigNumber.from("1e500"), BigNumber.from("5e100").log2());
-var getA5 = (level) => BigNumber.from(level).pow(0.25) / 16;
+var getA5 = (level, pd) => BigNumber.from(level).pow(0.25) / 16;
 var getA5Desc = (level) => `a_5=${getA5(level).toString(4)}`;
 var getA5Info = (level) => `a_5=\\sqrt[4]{${level}}/16`;
 
+var a0FreeLevels;
+var a1FreeLevels;
+var a2FreeLevels;
+
 // Permanent Upgrades
 var maxPolynomialDegreePerma;
-var a4HypopMs, a5HypopMs;
 
 // Checkpoint Upgrades
 var milestoneCost = new CustomCost(level => {
-    return 10 + BigNumber.from(25 * level);
+    const costs = [
+        8,
+        9999
+    ];
+
+    return BigNumber.from(costs[level] * tauRate);
 });
+var discriminantMs;
+var a0BaseMs;
+var a1PowerMs;
+var a4HypopMs;
+var a5HypopMs;
 
 const rootSolvers = [
     (_) => { throw new Error() },
@@ -371,20 +476,20 @@ const rootSolvers = [
     (coefficients) => { // Dx^3 + Cx^2 + Bx^1 + A = 0
         // Remap the variables.
         // Ax^3 + Bx^2 + Cx^1 + D = 0
-        const A = coefficients[3];
-        const B = coefficients[2];
-        const C = coefficients[1];
-        const D = coefficients[0];
+        const A = BigComplexNumber.fromReal(coefficients[3]);
+        const B = BigComplexNumber.fromReal(coefficients[2]);
+        const C = BigComplexNumber.fromReal(coefficients[1]);
+        const D = BigComplexNumber.fromReal(coefficients[0]);
 
-        const d0 = B * B - 3 * A * C;
-        const d1 = 2 * B * B * B - 9 * A * B * C + 27 * A * A * D;
-        const c = BigComplexNumber.fromReal(d1 * d1 - 4 * d0 * d0 * d0).sqrt().add(d1).div(2).cbrt();
-        
+        const d0 = B.mul(B).sub(A.mul(C).mul(3));
+        const d1 = B.mul(B).mul(B).mul(2).sub(A.mul(B).mul(C).mul(9)).add(A.mul(A).mul(D).mul(27));
+        const c = d1.mul(d1).sub(d0.mul(d0).mul(d0).mul(4)).sqrt().add(d1).div(2).cbrt();
+
         const cbrt0 = BigComplexNumber.ONE_ZERO.mul(c);
         const cbrt1 = BigComplexNumber.PRIMITIVE_CBRT_OF_UNITY.mul(c);
         const cbrt2 = BigComplexNumber.PRIMITIVE_CBRT_OF_UNITY_POW_2.mul(c);
 
-        const commonTerm = -1 / (3 * A);
+        const commonTerm = A.mul(3).reciprocal().neg();
         const root0 = cbrt0.reciprocal().mul(d0).add(cbrt0).add(B).mul(commonTerm);
         const root1 = cbrt1.reciprocal().mul(d0).add(cbrt1).add(B).mul(commonTerm);
         const root2 = cbrt2.reciprocal().mul(d0).add(cbrt2).add(B).mul(commonTerm);
@@ -457,7 +562,7 @@ const rootSolvers = [
         }
         return approximations;
     }
-]
+];
 
 var init = () => {
     currency = theory.createCurrency();
@@ -465,8 +570,9 @@ var init = () => {
 
     computedRoots = [ BigComplexNumber.ZERO_ZERO, BigComplexNumber.ZERO_ZERO, BigComplexNumber.ZERO_ZERO, BigComplexNumber.ZERO_ZERO, BigComplexNumber.ZERO_ZERO ];
     sortedRoots = [ 0, 1, 2, 3, 4 ];
+    computedDiscriminants = [ BigNumber.ZERO, BigNumber.ZERO, BigNumber.ZERO ];
     recomputeRoots = true;
-
+    
     ///////////////////
     // Regular Upgrades
 
@@ -479,7 +585,8 @@ var init = () => {
             theory.invalidatePrimaryEquation();
             polynomialDegree = Math.max(polynomialDegree, 0);
             recomputeRoots = true;
-        }
+        };
+        a0.canBeRefunded = () => true;
     }
 
     // a1
@@ -491,7 +598,8 @@ var init = () => {
             theory.invalidatePrimaryEquation();
             polynomialDegree = Math.max(polynomialDegree, 1);
             recomputeRoots = true;
-        }
+        };
+        a1.canBeRefunded = () => true;
     }
 
     // a2
@@ -503,7 +611,8 @@ var init = () => {
             theory.invalidatePrimaryEquation();
             polynomialDegree = Math.max(polynomialDegree, 2);
             recomputeRoots = true;
-        }
+        };
+        a2.canBeRefunded = () => true;
     }
 
     // a3
@@ -515,7 +624,8 @@ var init = () => {
             theory.invalidatePrimaryEquation();
             polynomialDegree = Math.max(polynomialDegree, 3);
             recomputeRoots = true;
-        }
+        };
+        a3.canBeRefunded = () => true;
     }
 
     // a4
@@ -527,7 +637,7 @@ var init = () => {
             theory.invalidatePrimaryEquation();
             polynomialDegree = Math.max(polynomialDegree, 4);
             recomputeRoots = true;
-        }
+        };
     }
 
     // a5
@@ -539,12 +649,12 @@ var init = () => {
             theory.invalidatePrimaryEquation();
             polynomialDegree = Math.max(polynomialDegree, 5);
             recomputeRoots = true;
-        }
+        };
     }
 
     ///////////////////
     // Permanent Upgrades
-    theory.createPublicationUpgrade(0, currency, 1e8);
+    theory.createPublicationUpgrade(0, currency, 1e7);
     theory.createBuyAllUpgrade(1, currency, 1e10);
     theory.createAutoBuyerUpgrade(2, currency, 1e30);
 
@@ -570,38 +680,84 @@ var init = () => {
     theory.setMilestoneCost(milestoneCost);
 
     {
-        a4HypopMs = theory.createMilestoneUpgrade(0, 1);
+        discriminantMs = theory.createMilestoneUpgrade(0, 4);
+        discriminantMs.getDescription = (_) => Localization.getUpgradeUnlockDesc(`\\Delta^{${1 + discriminantMs.level}}`);
+        discriminantMs.getInfo = (_) => Localization.getUpgradeUnlockInfo(`\\Delta^{${1 + discriminantMs.level}}`);
+        discriminantMs.boughtOrRefunded = (_) => {
+            recomputeRoots = true;
+            updateAvailability();
+        };
+    }
+
+    /*{
+        a0BaseMs = theory.createMilestoneUpgrade(0, 2);
+        a0BaseMs.description = `Increase the base of ${Utils.getMath(`a_0`)}`;
+        a0BaseMs.getInfo = (amount) => Utils.getMathTo(`a_0={${2 + a0BaseMs.level / 2}}^{-${a0.level}}`, `a_0={${2 + (a0BaseMs.level + amount) / 2}}^{-${a0.level}}`);
+        a0BaseMs.boughtOrRefunded = (_) => recomputeRoots = true;
+    }
+
+    {
+        a1PowerMs = theory.createMilestoneUpgrade(1, 3);
+        a1PowerMs.description = `Increase the power of ${Utils.getMath(`a_1`)}`;
+        a1PowerMs.getInfo = (amount) => Utils.getMathTo(`a_1^{${1 + a1PowerMs.level * 0.01}}`, `a_1^{${1 + (a1PowerMs.level + amount) * 0.01}}`);
+        a1PowerMs.boughtOrRefunded = (_) => recomputeRoots = true;
+    }*/
+
+    {
+        a4HypopMs = theory.createMilestoneUpgrade(2, 1);
         a4HypopMs.description = `Increase the arithmetic operator power of ${Utils.getMath(`1+x_3`)}`;
         a4HypopMs.getInfo = (_) => {
-            const left = a5.level > 0 ? `x_0x_1x_2x_3x_4` : `x_0x_1x_2x_3`;
-            const right = a5.level > 0 ? `(x_0x_1x_2x_4)^{1+x_3}` : `(x_0x_1x_2)^{1+x_3}`;
-            return Utils.getMathTo(left, right);
+            return `todo later`;
         };
         a4HypopMs.boughtOrRefunded = (_) => {
             theory.invalidatePrimaryEquation();
-            recomputeRoots = true;
             updateAvailability();
         };
         a4HypopMs.canBeRefunded = (_) => a5HypopMs.level == 0;
     }
 
     {
-        a5HypopMs = theory.createMilestoneUpgrade(1, 2);
+        a5HypopMs = theory.createMilestoneUpgrade(3, 2);
         a5HypopMs.description = `Increase the arithmetic operator power of ${Utils.getMath(`1+x_4`)}`;
         a5HypopMs.getInfo = (_) => {
-            if (a5HypopMs.level == 0) return Utils.getMathTo(`(x_0x_1x_2x_4)^{1+x_3}`, `(x_0x_1x_2)^{(1+x_3)(1+x_4)}`);
-            return Utils.getMathTo(`(x_0x_1x_2)^{(1+x_3)(1+x_4)}`, `(x_0x_1x_2)^{1+x_3} \\uparrow^2 (1+x_4)`);
+            return `todo later`;
         };
         a5HypopMs.boughtOrRefunded = (_) => {
             theory.invalidatePrimaryEquation();
-            recomputeRoots = true;
             updateAvailability();
         };
     }
 
+    /////////////////////
+    // Test Upgrades
+    {
+        testHideTests = theory.createPermanentUpgrade(10000000, currency, new FreeCost());
+        testHideTests.description = `Test: Hide test upgrades`;
+        testHideTests.bought = (_) => {
+            testHideTests.level %= 2;
+            testGetE5Rho.isAvailable = testHideTests.level == 0;
+            testSkip1hour.isAvailable = testHideTests.level == 0;
+        };
+
+        testGetE5Rho = theory.createSingularUpgrade(10000000, currency, new FreeCost());
+        testGetE5Rho.description = `Test: Get e5$\\rho$ for free`;
+        testGetE5Rho.bought = (_) => {
+            currency.value *= 1e5;
+            testGetE5Rho.level = 0;
+        };
+
+        testSkip1hour = theory.createSingularUpgrade(10000001, currency, new FreeCost());
+        testSkip1hour.description = `Test: Skip 1 hour`;
+        testSkip1hour.bought = (_) => {
+            tick(3600, 1);
+            testSkip1hour.level = 0;
+        };
+        testSkip1hour.isAvailable = testHideTests.level == 0;
+    }
+
     polynomialDegree = getHighestPolynomialDegree();
     updateAvailability();
-}
+};
 
 var updateAvailability = () => {
     a3.isAvailable = maxPolynomialDegreePerma.level >= 1;
@@ -610,45 +766,45 @@ var updateAvailability = () => {
 
     a4HypopMs.isAvailable = a4.isAvailable;
     a5HypopMs.isAvailable = a5.isAvailable && a4HypopMs.level > 0;
-}
+
+    testGetE5Rho.isAvailable = testHideTests.level == 0;
+    testSkip1hour.isAvailable = testHideTests.level == 0;
+};
 
 var tick = (elapsedTime, multiplier) => {
     if (recomputeRoots || polynomialDegree >= 5) {
-        computeRoots();
-        sortedRoots = sortRoots(polynomialDegree, computedRoots, a4HypopMs.level, a5HypopMs.level);
+        const newRoots = rootSolvers[polynomialDegree]([getA0(a0.level), getA1(a1.level), getA2(a2.level), getA3(a3.level), getA4(a4.level), getA5(a5.level)]);
+        computedRoots[0] = computedRoots[1] = computedRoots[2] = computedRoots[3] = computedRoots[4] = BigComplexNumber.ZERO_ZERO;
+        for (let i = 0; i < newRoots.length; i++) {
+            computedRoots[i] = newRoots[i];
+        }
+        sortedRoots = sortRoots(polynomialDegree, computedRoots);
+        computeDiscriminants();
         theory.invalidateQuaternaryValues();
         recomputeRoots = false;
     }
 
     let dt = BigNumber.from(elapsedTime * multiplier);
     let bonus = theory.publicationMultiplier;
-    rhodot = calculateRhodot(polynomialDegree, i => computedRoots[sortedRoots[i]], a4HypopMs.level, a5HypopMs.level) * bonus;
+    rhodot = calculateRhodot(polynomialDegree, i => computedRoots[sortedRoots[i]]) * bonus;
     currency.value += rhodot * dt;
 
-    theory.invalidateSecondaryEquation();
-}
+    theory.invalidateTertiaryEquation();
+};
 
-var calculateRhodot = (polynomialDegree, getRoot, a4HypopMsLevel, a5HypopMsLevel) => {
+var calculateRhodot = (polynomialDegree, getRoot) => {
     let result = getRoot(0);
     if (polynomialDegree >= 2) result = result.mul(getRoot(1).add(1));
     if (polynomialDegree >= 3) result = result.mul(getRoot(2));
-    if (polynomialDegree >= 4 && a4HypopMsLevel == 0) result = result.mul(getRoot(3));
-    if (polynomialDegree >= 5 && a5HypopMsLevel == 0) result = result.mul(getRoot(4));
-    if (polynomialDegree >= 4 && a4HypopMsLevel == 1) result = result.pow(getRoot(3).add(1));
-    if (polynomialDegree >= 5 && a5HypopMsLevel == 1) result = result.pow(getRoot(4).add(1));
-    if (polynomialDegree >= 5 && a5HypopMsLevel == 2 && !result.isZero()) result = BigComplexNumber.E_ZERO.pow(result.ln().pow(getRoot(4).add(1)));
+    if (polynomialDegree >= 4 && a4HypopMs.level == 0) result = result.mul(getRoot(3).add(1));
+    if (polynomialDegree >= 5 && a5HypopMs.level == 0) result = result.mul(getRoot(4));
+    if (polynomialDegree >= 4 && a4HypopMs.level == 1) result = result.pow(getRoot(3).add(1));
+    if (polynomialDegree >= 5 && a5HypopMs.level == 1) result = result.pow(getRoot(4).add(1));
+    if (polynomialDegree >= 5 && a5HypopMs.level == 2 && !result.isZero()) result = BigComplexNumber.E_ZERO.pow(result.ln().pow(getRoot(4).add(1)));
     return result.magnitude();
-}
+};
 
-var computeRoots = () => {
-    const newRoots = rootSolvers[polynomialDegree]([getA0(a0.level), getA1(a1.level), getA2(a2.level), getA3(a3.level), getA4(a4.level), getA5(a5.level)]);
-    computedRoots[0] = computedRoots[1] = computedRoots[2] = computedRoots[3] = computedRoots[4] = BigComplexNumber.ZERO_ZERO;
-    for (let i = 0; i < newRoots.length; i++) {
-        computedRoots[i] = newRoots[i];
-    }
-}
-
-var sortRoots = (polynomialDegree, roots, a4HypopMsLevel, a5HypopMsLevel) => {
+var sortRoots = (polynomialDegree, roots) => {
     const reduceIndex = (array, comparator) => {
         let result = 0;
         for (let i = 1; i < array.length; i++) {
@@ -663,7 +819,7 @@ var sortRoots = (polynomialDegree, roots, a4HypopMsLevel, a5HypopMsLevel) => {
     let result = [ 0, 1, 2, 3, 4 ];
 
     if (polynomialDegree >= 5 && a5HypopMsLevel >= 1) {
-        const goal = ONE_ZERO;
+        const goal = BigComplexNumber.ONE_ZERO;
         const leastIndex = reduceIndex(roots, (curr, next) => next.sub(1).sub(goal).compare(curr.sub(1).sub(goal)));
         if (leastIndex != 4) {
             result[4] = leastIndex;
@@ -671,8 +827,8 @@ var sortRoots = (polynomialDegree, roots, a4HypopMsLevel, a5HypopMsLevel) => {
         }
     }
 
-    if (polynomialDegree >= 4 && a4HypopMsLevel == 1) {
-        const goal = ONE_ZERO;
+    if (polynomialDegree >= 4) {
+        const goal = BigComplexNumber.ONE_ZERO;
         const leastIndex = reduceIndex(roots, (curr, next, i) => {
             if (i >= 4) return -1;
             return next.sub(1).sub(goal).compare(curr.sub(1).sub(goal));
@@ -684,11 +840,10 @@ var sortRoots = (polynomialDegree, roots, a4HypopMsLevel, a5HypopMsLevel) => {
     }
 
     if (polynomialDegree >= 2) {
-        let leastIndex = 0;
-        if (polynomialDegree >= 2 && roots[leastIndex].add(1).abs().compare(roots[1].add(1).abs()) >= 0) leastIndex = 1;
+        let leastIndex = 1;
+        if (roots[leastIndex].add(1).abs().compare(roots[0].add(1).abs()) >= 0) leastIndex = 0;
         if (polynomialDegree >= 3 && roots[leastIndex].add(1).abs().compare(roots[2].add(1).abs()) >= 0) leastIndex = 2;
-        if (polynomialDegree >= 4 && a4HypopMsLevel == 0 && roots[leastIndex].add(1).abs().compare(roots[3].add(1).abs()) >= 0) leastIndex = 3;
-        if (polynomialDegree >= 5 && a5HypopMsLevel == 0 && roots[leastIndex].add(1).abs().compare(roots[4].add(1).abs()) >= 0) leastIndex = 4;
+        if (polynomialDegree >= 5 && a5HypopMs.level == 0 && roots[leastIndex].add(1).abs().compare(roots[4].add(1).abs()) >= 0) leastIndex = 4;
         if (leastIndex != 1) {
             result[1] = leastIndex;
             result[leastIndex] = 1;
@@ -696,9 +851,38 @@ var sortRoots = (polynomialDegree, roots, a4HypopMsLevel, a5HypopMsLevel) => {
     }
 
     return result.slice(0, polynomialDegree);
-}
+};
+
+var computeDiscriminants = () => {
+    computedDiscriminants[0] = discriminantMs.level < 1 ? BigComplexNumber.ZERO_ZERO : BigComplexNumber.ONE_ZERO;
+    computedDiscriminants[1] = discriminantMs.level < 2 ? BigComplexNumber.ZERO_ZERO : BigComplexNumber.fromReal((() => {
+        const a = getA2(a2.level, 2);
+        if (a == 0) return BigNumber.ZERO;
+        const b = getA1(a1.level, 2);
+        const c = getA0(a0.level, 2);
+        return -(b*b + 4*a*c) / a;
+    })()).pow(1 / 2);
+    computedDiscriminants[2] = discriminantMs.level < 3 ? BigComplexNumber.ZERO_ZERO : BigComplexNumber.fromReal((() => {
+        const a = getA3(a3.level, 3);
+        if (a == 0) return BigNumber.ZERO;
+        const b = getA2(a2.level, 3);
+        const c = getA1(a1.level, 3);
+        const d = getA0(a0.level, 3);
+        return -(-27*a*a*d*d + 18*a*b*c*d - 4*a*c*c*c - 4*b*b*b*d + b*b*c*c) / a;
+    })()).pow(1 / 6);
+    computedDiscriminants[3] = discriminantMs.level < 4 ? BigComplexNumber.ZERO_ZERO : BigComplexNumber.fromReal((() => {
+        const a = getA4(a4.level, 4);
+        if (a == 0) return BigNumber.ZERO;
+        const b = getA3(a3.level, 4);
+        const c = getA2(a2.level, 4);
+        const d = getA1(a1.level, 4);
+        const e = getA0(a0.level, 4);
+        return (256*a*a*a*e*e*e - 192*a*a*b*d*e*e - 128*a*a*c*c*e*e + 144*a*a*c*d*d*e - 27*a*a*d*d*d*d + 144*a*b*b*c*e*e - 6*a*b*b*d*d*e - 80*a*b*c*c*d*e + 18*a*b*c*d*d*d + 16*a*c*c*c*c*e - 4*a*c*c*c*d*d - 27*b*b*b*b*e*e + 18*b*b*b*c*d*e - 4*b*b*b*d*d*d - 4*b*b*c*c*c*e + b*b*c*c*d*d) / a;
+    })()).pow(1 / 12);
+};
 
 var getInternalState = () => JSON.stringify({
+    stage: stage,
     polynomialDegree: polynomialDegree,
     computedRoots: {
         "0": computedRoots[0].stringify(),
@@ -713,6 +897,11 @@ var getInternalState = () => JSON.stringify({
         "2": sortedRoots[2],
         "3": sortedRoots[3],
         "4": sortedRoots[4]
+    },
+    computedDiscriminants: {
+        "0": computedDiscriminants[0].stringify(),
+        "1": computedDiscriminants[1].stringify(),
+        "2": computedDiscriminants[2].stringify()
     }
 });
 
@@ -720,81 +909,155 @@ var setInternalState = (stateStr) => {
     if (!stateStr) return;
 
     const state = JSON.parse(stateStr);
-    polynomialDegree = state.polynomialDegree;
-    computedRoots = new Array(5);
-    computedRoots[0] = BigComplexNumber.fromStringified(state.computedRoots[0]);
-    computedRoots[1] = BigComplexNumber.fromStringified(state.computedRoots[1]);
-    computedRoots[2] = BigComplexNumber.fromStringified(state.computedRoots[2]);
-    computedRoots[3] = BigComplexNumber.fromStringified(state.computedRoots[3]);
-    computedRoots[4] = BigComplexNumber.fromStringified(state.computedRoots[4]);
-    sortedRoots = new Array(5);
-    sortedRoots[0] = state.sortedRoots[0];
-    sortedRoots[1] = state.sortedRoots[1];
-    sortedRoots[2] = state.sortedRoots[2];
-    sortedRoots[3] = state.sortedRoots[3];
-    sortedRoots[4] = state.sortedRoots[4];
-}
+    stage = state.stage ?? stage;
+    polynomialDegree = state.polynomialDegree ?? getHighestPolynomialDegree();
+    computedRoots = [ BigComplexNumber.ZERO_ZERO, BigComplexNumber.ZERO_ZERO, BigComplexNumber.ZERO_ZERO, BigComplexNumber.ZERO_ZERO, BigComplexNumber.ZERO_ZERO ];
+    if (state.computedDiscriminants) {
+        computedRoots[0] = BigComplexNumber.fromStringified(state.computedRoots[0]) ?? BigComplexNumber.ZERO_ZERO;
+        computedRoots[1] = BigComplexNumber.fromStringified(state.computedRoots[1]) ?? BigComplexNumber.ZERO_ZERO;
+        computedRoots[2] = BigComplexNumber.fromStringified(state.computedRoots[2]) ?? BigComplexNumber.ZERO_ZERO;
+        computedRoots[3] = BigComplexNumber.fromStringified(state.computedRoots[3]) ?? BigComplexNumber.ZERO_ZERO;
+        computedRoots[4] = BigComplexNumber.fromStringified(state.computedRoots[4]) ?? BigComplexNumber.ZERO_ZERO;
+    }
+    sortedRoots = [ 0, 1, 2, 3, 4 ];
+    if (state.sortedRoots) {
+        sortedRoots[0] = state.sortedRoots[0] ?? 0;
+        sortedRoots[1] = state.sortedRoots[1] ?? 1;
+        sortedRoots[2] = state.sortedRoots[2] ?? 2;
+        sortedRoots[3] = state.sortedRoots[3] ?? 3;
+        sortedRoots[4] = state.sortedRoots[4] ?? 4;
+    }
+    computedDiscriminants = [ BigComplexNumber.ZERO_ZERO, BigComplexNumber.ZERO_ZERO, BigComplexNumber.ZERO_ZERO, BigComplexNumber.ZERO_ZERO ];
+    if (state.computedDiscriminants) {
+        computedDiscriminants[0] = BigComplexNumber.fromStringified(state.computedDiscriminants[0]) ?? BigComplexNumber.ZERO_ZERO;
+        computedDiscriminants[1] = BigComplexNumber.fromStringified(state.computedDiscriminants[1]) ?? BigComplexNumber.ZERO_ZERO;
+        computedDiscriminants[2] = BigComplexNumber.fromStringified(state.computedDiscriminants[2]) ?? BigComplexNumber.ZERO_ZERO;
+        computedDiscriminants[3] = BigComplexNumber.fromStringified(state.computedDiscriminants[3]) ?? BigComplexNumber.ZERO_ZERO;
+    }
+};
 
 var postPublish = () => {
     recomputeRoots = true;
     polynomialDegree = getHighestPolynomialDegree();
-}
+};
 
 var getPrimaryEquation = () => {
-    theory.primaryEquationScale = 1.1;
-    theory.primaryEquationHeight = 100;
+    let result = ``;
 
-    let result = `\\begin{cases}`;
-    result += `P(x)=\\sum_{k=0}^{${polynomialDegree}}{a_kx^k} \\\\`;
-    result += `x \\in \\mathbb{C} \\mid P(x) = \\{x_0`;
-    for (let i = 1; i < polynomialDegree; i++) {
-        result += `,x_${i}`;
-    }
-    result += `\\} \\\\`;
-    result += `\\dot{\\rho} = |`;
-    if (a4.level > 0 && a4HypopMs.level == 1 || a5.level > 0 && a5HypopMs.level == 1) result += `(`;
-    result += `{x_0`;
-    if (a3.level > 0) result += `x_2`;
-    if (a2.level > 0) result += `(1+x_1)`;
-    if (a4.level > 0 && a4HypopMs.level == 0) result += `x_3`;
-    if (a5.level > 0 && a5HypopMs.level == 0) result += `x_4`;
-    result += `}`;
-    if (a4.level > 0 && a4HypopMs.level == 1 || a5.level > 0 && a5HypopMs.level == 1) {
-        result += `)^{`;
-        if (a4.level > 0 && a4HypopMs.level == 1) result += `(1+x_3)`;
-        if (a5.level > 0 && a5HypopMs.level == 1) result += `(1+x_4)`;
+    if (stage == 0) {
+        theory.primaryEquationScale = 0.9;
+        theory.primaryEquationHeight = 100;
+
+        result = `\\begin{cases}`;
+        result += `P(x)=\\sum_{k=0}^{${polynomialDegree}}{a_kx^k} \\\\`;
+        result += `x \\in \\mathbb{C} \\mid P(x) = \\{x_0`;
+        if (polynomialDegree == 1) result += `,x_1`;
+        if (polynomialDegree == 1 || polynomialDegree == 2) result += `,x_2`;
+        if (polynomialDegree >= 3) result += `,x_1,\\cdots,x_${polynomialDegree}`;
+        result += `\\} \\\\`;
+        result += `\\dot{\\rho} = |`;
+        if (a4.level > 0 && a4HypopMs.level == 1 || a5.level > 0 && a5HypopMs.level == 1) result += `(`;
+        result += `{x_0`;
+        if (a3.level > 0) result += `x_2`;
+        if (a5.level > 0 && a5HypopMs.level == 0) result += `x_4`;
+        if (a2.level > 0) result += `(1+x_1)`;
+        if (a4.level > 0 && a4HypopMs.level == 0) result += `(1+x_3)`;
         result += `}`;
+        if (a4.level > 0 && a4HypopMs.level == 1 || a5.level > 0 && a5HypopMs.level == 1) {
+            result += `)^{`;
+            if (a4.level > 0 && a4HypopMs.level == 1) result += `(1+x_3)`;
+            if (a5.level > 0 && a5HypopMs.level == 1) result += `(1+x_4)`;
+            result += `}`;
+        }
+        if (a5.level > 0 && a5HypopMs.level == 2) result += `\\uparrow^2 (1+x_4)`;
+        result += `|`;
+        result += `\\end{cases}`;
+    } else if (stage == 1) {
+        theory.primaryEquationScale = 0.65;
+        theory.primaryEquationHeight = 110;
+
+        result = `\\begin{array}{cl}`;
+        result += `M_n=\\begin{pmatrix}`;
+        result += `a_n & \\cdots & a_0 & 0 & \\cdots & 0 \\\\`;
+        result += `0 & \\ddots & \\ddots & \\ddots & \\cdots & \\vdots \\\\`;
+        result += `0 & \\cdots & 0 & a_n & \\cdots & a_0 \\\\`;
+        result += `na_n & \\cdots & a_1 & 0 & \\cdots & 0 \\\\`;
+        result += `0 & \\ddots & \\ddots & \\ddots & \\cdots & \\vdots \\\\`;
+        result += `0 & \\cdots & 0 & na_n & \\cdots & a_1 \\\\`;
+        result += `\\end{pmatrix} \\\\`;
+        result += `D_n = \\sqrt[n(n-1)]{\\frac{(-1)^{n(n-1)/2}}{a_n} \\text{Res}(M_n)}`;
+        result += `\\end{array}`;
     }
-    if (a5.level > 0 && a5HypopMs.level == 2) result += `\\uparrow^2 (1+x_4)`;
-    result += `|`;
-    result += `\\end{cases}`;
     return result;
-}
+};
 
 var getSecondaryEquation = () => {
+    return ``;
+};
+
+var getTertiaryEquation = () => {
     let result = `\\begin{matrix}`;
     result += `${theory.latexSymbol}=\\max\\rho^{${tauRate}}`;
-    result += `,&\\dot{\\rho}=${rhodot.toString()}`;
-    result += `\\end{matrix}`
+    result += `& \\dot{\\rho}=${rhodot.toString()}`;
+    result += `\\end{matrix}`;
     return result;
-}
+};
 
 var getQuaternaryEntries = () => {
-    if (quaternaryEntries.length == 0) {
-        quaternaryEntries.push(new QuaternaryEntry("x_0", null));
-        quaternaryEntries.push(new QuaternaryEntry("x_1", null));
-        quaternaryEntries.push(new QuaternaryEntry("x_2", null));
-        quaternaryEntries.push(new QuaternaryEntry("x_3", null));
-        quaternaryEntries.push(new QuaternaryEntry("x_4", null));
+    switch (stage) {
+        case 0: {
+            if (quaternaryEntries.length == 0) {
+                quaternaryEntries.push(new QuaternaryEntry("x_0", null));
+                quaternaryEntries.push(new QuaternaryEntry("x_1", null));
+                quaternaryEntries.push(new QuaternaryEntry("x_2", null));
+                quaternaryEntries.push(new QuaternaryEntry("x_3", null));
+                quaternaryEntries.push(new QuaternaryEntry("x_4", null));
+            }
+            quaternaryEntries[0].value = computedRoots[sortedRoots[0]] && polynomialDegree >= 1 ? computedRoots[sortedRoots[0]].toLatexString() : null;
+            quaternaryEntries[1].value = computedRoots[sortedRoots[1]] && polynomialDegree >= 2 ? computedRoots[sortedRoots[1]].toLatexString() : null;
+            quaternaryEntries[2].value = computedRoots[sortedRoots[2]] && polynomialDegree >= 3 ? computedRoots[sortedRoots[2]].toLatexString() : null;
+            quaternaryEntries[3].value = computedRoots[sortedRoots[3]] && polynomialDegree >= 4 ? computedRoots[sortedRoots[3]].toLatexString() : null;
+            quaternaryEntries[4].value = computedRoots[sortedRoots[4]] && polynomialDegree >= 5 ? computedRoots[sortedRoots[4]].toLatexString() : null;
+            break;
+        }
+        case 1: {
+            if (quaternaryEntries.length == 0) {
+                quaternaryEntries.push(new QuaternaryEntry(`D_1`, null));
+                quaternaryEntries.push(new QuaternaryEntry(`D_2`, null));
+                quaternaryEntries.push(new QuaternaryEntry(`D_3`, null));
+                quaternaryEntries.push(new QuaternaryEntry(`D_4`, null));
+            }
+            quaternaryEntries[0].value = computedDiscriminants[0] && discriminantMs.level >= 1 ? computedDiscriminants[0].toLatexString() : null;
+            quaternaryEntries[1].value = computedDiscriminants[1] && discriminantMs.level >= 2 ? computedDiscriminants[1].toLatexString() : null;
+            quaternaryEntries[2].value = computedDiscriminants[2] && discriminantMs.level >= 3 ? computedDiscriminants[2].toLatexString() : null;
+            quaternaryEntries[3].value = computedDiscriminants[3] && discriminantMs.level >= 4 ? computedDiscriminants[3].toLatexString() : null;
+            break;
+        }
     }
-
-    quaternaryEntries[0].value = polynomialDegree >= 1 ? computedRoots[sortedRoots[0]].toLatexString() : null;
-    quaternaryEntries[1].value = polynomialDegree >= 2 ? computedRoots[sortedRoots[1]].toLatexString() : null;
-    quaternaryEntries[2].value = polynomialDegree >= 3 ? computedRoots[sortedRoots[2]].toLatexString() : null;
-    quaternaryEntries[3].value = polynomialDegree >= 4 ? computedRoots[sortedRoots[3]].toLatexString() : null;
-    quaternaryEntries[4].value = polynomialDegree >= 5 ? computedRoots[sortedRoots[4]].toLatexString() : null;
     return quaternaryEntries;
-}
+};
+
+var canGoToPreviousStage = () => stage > 0;
+
+var goToPreviousStage = () => {
+    stage -= 1;
+    theory.invalidatePrimaryEquation();
+    theory.invalidateSecondaryEquation();
+    theory.invalidateTertiaryEquation();
+    quaternaryEntries = [];
+    theory.invalidateQuaternaryValues();
+};
+
+var canGoToNextStage = () => stage < 1 && discriminantMs.level > 0;
+
+var goToNextStage = () => {
+    stage += 1;
+    theory.invalidatePrimaryEquation();
+    theory.invalidateSecondaryEquation();
+    theory.invalidateTertiaryEquation();
+    quaternaryEntries = [];
+    theory.invalidateQuaternaryValues();
+};
 
 var get2DGraphValue = () => currency.value.sign * (BigNumber.ONE + currency.value.abs()).log10().toNumber();
 var getHighestPolynomialDegree = () => {
@@ -803,7 +1066,7 @@ var getHighestPolynomialDegree = () => {
     if (a3.level > 0) return 3;
     if (a2.level > 0) return 2;
     return 1;
-}
+};
 
 BigComplexNumber.staticInit();
 init();
