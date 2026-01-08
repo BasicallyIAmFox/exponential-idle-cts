@@ -959,7 +959,7 @@ var computeDiscriminants = () => {
         const d = getA1(a1.level, 4);
         const e = getA0(a0.level, 4);
         return (256*a*a*a*e*e*e - 192*a*a*b*d*e*e - 128*a*a*c*c*e*e + 144*a*a*c*d*d*e - 27*a*a*d*d*d*d + 144*a*b*b*c*e*e - 6*a*b*b*d*d*e - 80*a*b*c*c*d*e + 18*a*b*c*d*d*d + 16*a*c*c*c*c*e - 4*a*c*c*c*d*d - 27*b*b*b*b*e*e + 18*b*b*b*c*d*e - 4*b*b*b*d*d*d - 4*b*b*c*c*c*e + b*b*c*c*d*d) / a;
-    })()).pow(1 / 80);
+    })()).pow(1 / 160);
 };
 
 var getInternalState = () => JSON.stringify({
@@ -1065,7 +1065,7 @@ var getPrimaryEquation = () => {
         result += `0 & \\ddots & \\ddots & \\ddots & \\cdots & \\vdots \\\\`;
         result += `0 & \\cdots & 0 & na_n & \\cdots & a_1 \\\\`;
         result += `\\end{pmatrix} \\\\`;
-        result += `D_n = \\sqrt[n(n-1)]{\\frac{(-1)^{n(n-1)/2}}{a_n} \\text{Res}(M_n)}`;
+        result += `D_n = \\sqrt[4^{n-1}10]{\\frac{(-1)^{n(n-1)/2}}{a_n} \\text{Res}(M_n)}`;
         result += `\\end{array}`;
     }
     return result;
