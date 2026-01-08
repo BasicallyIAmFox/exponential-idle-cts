@@ -304,7 +304,7 @@ var id = "roots_of_polynomial";
 var name = "Roots of Polynomial";
 var description = "A basic theory.";
 var authors = "BasicallyIAmFox";
-var version = 2;
+var version = 3;
 
 var currency;
 var currencyDiscriminant;
