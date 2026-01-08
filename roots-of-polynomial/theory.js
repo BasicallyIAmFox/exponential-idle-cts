@@ -304,7 +304,7 @@ var id = "roots_of_polynomial";
 var name = "Roots of Polynomial";
 var description = "A basic theory.";
 var authors = "BasicallyIAmFox";
-var version = 5;
+var version = 6;
 
 var currency;
 var currencyDiscriminant;
@@ -1033,7 +1033,7 @@ var getPrimaryEquation = () => {
         result += `x \\in \\mathbb{C} \\mid P(x) = \\{x_0`;
         if (polynomialDegree == 1 || polynomialDegree == 2) result += `,x_1`;
         if (polynomialDegree == 2) result += `,x_2`;
-        if (polynomialDegree >= 3) result += `,\\cdots,x_${polynomialDegree}`;
+        if (polynomialDegree >= 3) result += `,\\cdots,x_${polynomialDegree - 1}`;
         result += `\\} \\\\`;
         result += `\\dot{\\rho} = |`;
         if (a4.level > 0 && a4HypopMs.level == 1 || a5.level > 0 && a5HypopMs.level == 1) result += `(`;
