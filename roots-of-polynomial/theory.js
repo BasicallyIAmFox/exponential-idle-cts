@@ -304,7 +304,7 @@ var id = "roots_of_polynomial";
 var name = "Roots of Polynomial";
 var description = "A basic theory.";
 var authors = "BasicallyIAmFox";
-var version = 3;
+var version = 4;
 
 var currency;
 var currencyDiscriminant;
@@ -1031,9 +1031,9 @@ var getPrimaryEquation = () => {
         result = `\\begin{cases}`;
         result += `P(x)=\\sum_{k=0}^{${polynomialDegree}}{a_kx^k} \\\\`;
         result += `x \\in \\mathbb{C} \\mid P(x) = \\{x_0`;
-        if (polynomialDegree == 1) result += `,x_1`;
-        if (polynomialDegree == 1 || polynomialDegree == 2) result += `,x_2`;
-        if (polynomialDegree >= 3) result += `,x_1,\\cdots,x_${polynomialDegree}`;
+        if (polynomialDegree >= 1) result += `,x_1`;
+        if (polynomialDegree == 2) result += `,x_2`;
+        if (polynomialDegree >= 3) result += `,\\cdots,x_${polynomialDegree}`;
         result += `\\} \\\\`;
         result += `\\dot{\\rho} = |`;
         if (a4.level > 0 && a4HypopMs.level == 1 || a5.level > 0 && a5HypopMs.level == 1) result += `(`;
