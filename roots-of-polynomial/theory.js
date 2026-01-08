@@ -102,7 +102,7 @@ class BigComplexNumber {
     }
 
     arg() {
-        return this.imaginaryPart.sin() / this.realPart.cos();
+        return Math.atan2(this.imaginaryPart, this.realPart);
     }
 
     abs() {
@@ -168,14 +168,22 @@ class BigComplexNumber {
         }
 
         if (typeof(other) == 'number' || TypeUtils.isBigNumber(other)) {
+            if (other == 0) {
+                return BigComplexNumber.ONE_ZERO;
+            }
+
             const magnitude = this.magnitude().pow(other);
             const theta = this.arg() * other;
             return BigComplexNumber.fromPolar(magnitude, theta);
         }
 
+        if (other.isZero()) {
+            return BigComplexNumber.ONE_ZERO;
+        }
+
         const rho = this.magnitude();
         if (rho == 0) return BigComplexNumber.ZERO_ZERO;
-        const theta = Math.atan2(this.imaginaryPart, this.realPart);
+        const theta = this.arg();
         const newTheta = other.realPart * theta + other.imaginaryPart * rho.log();
         const newMagnitude = rho.pow(other.realPart) * (-other.imaginaryPart * theta).exp();
         return BigComplexNumber.fromPolar(newMagnitude, newTheta);
@@ -213,13 +221,11 @@ class BigComplexNumber {
     }
 
     sqrt() {
-        return this.pow(0.5);
+        return this.pow(1 / 2);
     }
 
     cbrt() {
-        const magnitude = Math.cbrt(this.magnitude().toNumber());
-        const theta = this.arg() / 3 + Math.PI / 3;
-        return BigComplexNumber.fromPolar(magnitude, theta);
+        return this.pow(1 / 3);
     }
 
     isZero() {
@@ -256,15 +262,15 @@ class BigComplexNumber {
     }
 
     toString() {
-        return `(${this.realPart})+(${this.imaginaryPart})i`;
+        return `(${this.realPart.toNumber()})+(${this.imaginaryPart.toNumber()})i`;
     }
 
     toLatexString() {
         if (this.imaginaryPart == 0) {
-            return this.realPart.toString(1, 0, Rounding.NEAREST);
+            return this.realPart.toString();
         }
         if (this.realPart == 0) {
-            return this.imaginaryPart.toString(1, 0, Rounding.NEAREST) + `i`;
+            return this.imaginaryPart.toString() + `i`;
         }
 
         const manualToString = (value) => {
@@ -304,7 +310,7 @@ var id = "roots_of_polynomial";
 var name = "Roots of Polynomial";
 var description = "A basic theory.";
 var authors = "BasicallyIAmFox";
-var version = 6;
+var version = 7;
 
 var currency;
 var currencyDiscriminant;
@@ -319,7 +325,7 @@ var stage = 0;
 var quaternaryEntries;
 
 // Balancing
-var pubPower = 0.1;
+var pubPower = 0.15;
 var tauRate = 0.4;
 var pubExp = pubPower / tauRate;
 var getTau = () => currency.value.pow(tauRate);
@@ -333,21 +339,21 @@ var testHideTests;
 
 // Regular Upgrades
 var a0;
-var a0Cost = new FirstFreeCost(new ExponentialCost(10, Math.log2(15)));
+var a0Cost = new FirstFreeCost(new ExponentialCost(10, Math.log2(1.8)));
 var getA0 = (level, pd) => {
     if (level == 0) return BigNumber.ZERO;
 
-    return -BigNumber.TWO.pow(level - 1);
+    return -(BigNumber.FOUR / BigNumber.THREE).pow(level - 1);
 };
 var getA0Desc = (level) => {
     if (level == 0) return `a_0=0`;
 
-    return `a_0=-2^{${(level - 1).toFixed(2)}}`;
+    return `a_0=-(4/3)^{${(level - 1).toFixed(0)}}`;
 };
 var getA0Info = (level) => {
     if (level == 0) return `a_0=0`;
 
-    return `a_0=${getA0(level).toString(0)}`;
+    return `a_0=${getA0(level).toString(2)}`;
 }
 
 var a1;
@@ -368,7 +374,7 @@ var getA2 = (level, pd) => {
     if (level == 0) return BigNumber.ZERO;
 
     if ((pd || polynomialDegree) >= 3) {
-        return -(BigNumber.THREE * getA1(a1.level + getA1FreeLevels(a1FreeLevels.level), pd).sqrt()).pow(level / (level + 1.5));
+        return -(BigNumber.THREE * getA1(a1.level + getA1FreeLevels(a1FreeLevels.level), pd).sqrt()).pow(1 - 1 / (1 + Math.log(level)));
     }
     return BigNumber.TWO.pow(-level);
 };
@@ -376,7 +382,7 @@ var getA2Desc = (level) => {
     if (level == 0) return `a_2=0`;
 
     if (polynomialDegree >= 3) {
-        return `a_2=-{${(BigNumber.THREE * getA1(a1.level + getA1FreeLevels(a1FreeLevels.level)).sqrt()).toString(2)}}^{${(level / (level + 1.5)).toFixed(4)}}`;
+        return `a_2=-{${(BigNumber.THREE * getA1(a1.level + getA1FreeLevels(a1FreeLevels.level)).sqrt()).toString(2)}}^{${(1 - 1 / (1 + Math.log(level))).toFixed(4)}}`;
     }
     return `a_2=2^{-${level}}`;
 };
@@ -448,9 +454,9 @@ var getA0FreeLevelsInfo = (level) => `{${(2 * level).toFixed(1)}} \\uparrow \\te
 
 var a1FreeLevels;
 var a1FreeLevelsCost = new ExponentialCost(100, Math.log2(20));
-var getA1FreeLevels = (level) => 0.3 * level;
-var getA1FreeLevelsDesc = (_) => `{0.3} \\uparrow \\text{level of variable } a_1`;
-var getA1FreeLevelsInfo = (level) => `{${(0.3 * level).toFixed(1)}} \\uparrow \\text{level of variable } a_1`;
+var getA1FreeLevels = (level) => 3 * level;
+var getA1FreeLevelsDesc = (_) => `{3} \\uparrow \\text{level of variable } a_1`;
+var getA1FreeLevelsInfo = (level) => `{${(3 * level).toFixed(1)}} \\uparrow \\text{level of variable } a_1`;
 
 var a2FreeLevels;
 var a2FreeLevelsCost = new ExponentialCost(10, Math.log2(4));
@@ -465,7 +471,8 @@ var maxPolynomialDegreePerma;
 var milestoneCost = new CustomCost(level => {
     const costs = [
         10,
-        25,
+        20,
+        30,
         9999
     ];
 
@@ -597,6 +604,8 @@ var init = () => {
     sortedRoots = [ 0, 1, 2, 3, 4 ];
     computedDiscriminants = [ BigNumber.ZERO, BigNumber.ZERO, BigNumber.ZERO ];
     recomputeRoots = true;
+    rhodot = BigNumber.ZERO;
+    lambdadot = BigNumber.ZERO;
     
     ///////////////////
     // Regular Upgrades
@@ -920,9 +929,9 @@ var sortRoots = (polynomialDegree, roots) => {
 
 var computeRoots = () => {
     const newRoots = rootSolvers[polynomialDegree]([
-        getA0(a0.level + 0.1 * a0FreeLevels.level),
-        getA1(a1.level + 0.1 * a1FreeLevels.level),
-        getA2(a2.level + 0.1 * a2FreeLevels.level),
+        getA0(a0.level + getA0FreeLevels(a0FreeLevels.level)),
+        getA1(a1.level + getA1FreeLevels(a1FreeLevels.level)),
+        getA2(a2.level + getA2FreeLevels(a2FreeLevels.level)),
         getA3(a3.level),
         getA4(a4.level),
         getA5(a5.level)
@@ -950,7 +959,7 @@ var computeDiscriminants = () => {
         const c = getA1(a1.level, 3);
         const d = getA0(a0.level, 3);
         return -(-27*a*a*d*d + 18*a*b*c*d - 4*a*c*c*c - 4*b*b*b*d + b*b*c*c) / a;
-    })()).pow(1 / 40);
+    })()).pow(1 / 15);
     computedDiscriminants[3] = discriminantMs.level < 4 ? BigComplexNumber.ZERO_ZERO : BigComplexNumber.fromReal((() => {
         const a = getA4(a4.level, 4);
         if (a == 0) return BigNumber.ZERO;
@@ -959,7 +968,7 @@ var computeDiscriminants = () => {
         const d = getA1(a1.level, 4);
         const e = getA0(a0.level, 4);
         return (256*a*a*a*e*e*e - 192*a*a*b*d*e*e - 128*a*a*c*c*e*e + 144*a*a*c*d*d*e - 27*a*a*d*d*d*d + 144*a*b*b*c*e*e - 6*a*b*b*d*d*e - 80*a*b*c*c*d*e + 18*a*b*c*d*d*d + 16*a*c*c*c*c*e - 4*a*c*c*c*d*d - 27*b*b*b*b*e*e + 18*b*b*b*c*d*e - 4*b*b*b*d*d*d - 4*b*b*c*c*c*e + b*b*c*c*d*d) / a;
-    })()).pow(1 / 160);
+    })()).pow(1 / 20);
 };
 
 var getInternalState = () => JSON.stringify({
@@ -1065,7 +1074,7 @@ var getPrimaryEquation = () => {
         result += `0 & \\ddots & \\ddots & \\ddots & \\cdots & \\vdots \\\\`;
         result += `0 & \\cdots & 0 & na_n & \\cdots & a_1 \\\\`;
         result += `\\end{pmatrix} \\\\`;
-        result += `D_n = \\sqrt[4^{n-1}10]{\\frac{(-1)^{n(n-1)/2}}{a_n} \\text{Res}(M_n)}`;
+        result += `D_n = \\sqrt[5+5n]{\\frac{(-1)^{n(n-1)/2}}{a_n} \\text{Res}(M_n)}`;
         result += `\\end{array}`;
     }
     return result;
