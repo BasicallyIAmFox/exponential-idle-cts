@@ -125,9 +125,13 @@ var tick = (elapsedTime, multiplier) => {
 };
 
 var getPrimaryEquation = () => {
+    theory.primaryEquationScale = 0.9;
+    theory.primaryEquationHeight = 120;
+
+    //I \\subseteq {1, \\cdots, n} \\\\ |I| = k
     let result = ``;
-    result += `e_k = \\sum_{\\substack{I \\subseteq {1, \\cdots, n} \\ |I| = k}} \\prod{i \\in I} {r_{i}}`;
-    result += `\\ \\dot{${currency.symbol}} = \\abs{\\prod_{k = 1}^{n} {(1 + e_k)}}`;
+    result += `e_k = \\sum_{\\begin{matrix} I \\subseteq \\{1, \\cdots, n \\} \\\\ |I| = k \\end{matrix}} \\prod{i \\in I} {r_{i}}`;
+    result += `\\\\ \\dot{${currency.symbol}} = |\\prod_{k = 1}^{n} {(1 + e_k)}|`;
     return result;
 };
 
