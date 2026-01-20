@@ -62,8 +62,15 @@ var init = () => {
             let aHyperScalingStart = aCost[i].getMax(0, ajBaseCost) + 2;
             let bHyperScalingStart = bCost[i].getMax(0, bjBaseCost) + 2;
 
-            aCost[i] = new CompositeCost(aHyperScalingStart, aCost[i], new ExponentialCost(aCost[i].getSum(0, aHyperScalingStart), Math.log2(aCostScaling) * Math.pow(1.5, j)));
-            bCost[i] = new CompositeCost(bHyperScalingStart, bCost[i], new ExponentialCost(aCost[i].getSum(0, bHyperScalingStart), Math.log2(bCostScaling) * Math.pow(1.5, j)));
+            let aCostHyperScaling = Math.log2(aCostScaling) * Math.pow(1.5, j);
+            let bCostHyperScaling = Math.log2(bCostScaling) * Math.pow(1.5, j);
+            if (j >= 3) {
+                aCostHyperScaling *= Math.pow(1.5, j - 2);
+                bCostHyperScaling *= Math.pow(1.5, j - 2);
+            }
+
+            aCost[i] = new CompositeCost(aHyperScalingStart, aCost[i], new ExponentialCost(aCost[i].getSum(0, aHyperScalingStart), aCostHyperScaling));
+            bCost[i] = new CompositeCost(bHyperScalingStart, bCost[i], new ExponentialCost(aCost[i].getSum(0, bHyperScalingStart), bCostHyperScaling));
         }
     }
     aCost[1] = new FirstFreeCost(aCost[1]);
@@ -154,7 +161,7 @@ var getPrimaryEquation = () => {
 
     let result = `\\begin{array}{cl}`;
     result += `\\dot{${currency.symbol}} = |\\prod_{k = 1}^{n} {e_k}|`;
-    result += `\\\\ e_k = \\sum_{\\begin{matrix} I \\subseteq \\{1, \\cdots, n \\} \\\\ |I| = k \\end{matrix}} \\prod_{i \\in I} {r_{i}}`;
+    result += `\\\\ e_k = \\sum_{I \\subseteq \\{1, \\cdots, n \\} \\\\ |I| = k} \\prod_{i \\in I} {r_{i}}`;
     result += `\\end{array}`;
     return result;
 };
