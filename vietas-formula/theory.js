@@ -5,12 +5,8 @@ import { theory } from "./api/Theory";
 import { Utils } from "./api/Utils";
 
 var id = "vietas_formula";
-var name = () => {
-    return "Vieta's Formula";
-};
-var description = () => {
-    return "A custom theory based on Vieta's Formula.";
-};
+var name = "Vieta's Formula";
+var description = "A custom theory based on Vieta's Formula.";
 var authors = "BasicallyIAmFox";
 var version = 1;
 
