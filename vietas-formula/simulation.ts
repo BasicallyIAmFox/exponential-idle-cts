@@ -3,7 +3,7 @@ import theoryClass from "../theory";
 import Variable from "../../Utils/variable";
 import { ExponentialValue, StepwisePowerSumValue } from "../../Utils/value";
 import { ExponentialCost, FirstFreeCost } from '../../Utils/cost';
-import { l10, toCallables, parseLog10String, add } from "../../Utils/helpers";
+import { l10, toCallables, parseLog10String, binaryInsertionSearch, add } from "../../Utils/helpers";
 
 export default async function vf(data: theoryData): Promise<simResult> {
   const sim = new vfSim(data);
@@ -51,9 +51,17 @@ class vfSim extends theoryClass<theory> {
     return conditions;
   }
   getTotMult(val: number): number {
-    return Math.max(0, val * this.tauFactor / 0.15 + 5);
+    return Math.max(0, val * this.tauFactor * 0.3 + l10(5));
   }
   getMilestonePriority(): number[] {
+    const rho = Math.max(this.lastPub, this.maxRho);
+
+    const ai_points = [20, 150];
+    const bi_points = [15, 50, 200];
+    const ai_max = binaryInsertionSearch(ai_points, rho);
+    const bi_max = binaryInsertionSearch(bi_points, rho);
+    this.milestonesMax = [ai_max, bi_max, 5];
+
     return [0, 2, 1];
   }
   constructor(data: theoryData) {
@@ -64,17 +72,17 @@ class vfSim extends theoryClass<theory> {
     this.milestonesMax = [2, 3, 5];
     this.totMult = data.rho < this.pubUnlock ? 0 : this.getTotMult(data.rho);
     this.variables = [
-        new Variable({ name: "tdot", cost: new ExponentialCost(1e5, 1e5, true), valueScaling: new ExponentialValue(10) }),
-        new Variable({ name: "a1", cost: new FirstFreeCost(new ExponentialCost(2, 3, true)), valueScaling: new StepwisePowerSumValue() }),
-        new Variable({ name: "b1", cost: new ExponentialCost(1e3, 500, true), valueScaling: new ExponentialValue(1.5) }),
-        new Variable({ name: "a2", cost: new ExponentialCost(30, 5, true), valueScaling: new StepwisePowerSumValue() }),
-        new Variable({ name: "b2", cost: new ExponentialCost(1e3, 600, true), valueScaling: new ExponentialValue(1.5) }),
-        new Variable({ name: "a3", cost: new ExponentialCost(1e4, 15, true), valueScaling: new StepwisePowerSumValue() }),
-        new Variable({ name: "b3", cost: new ExponentialCost(1e5, 700, true), valueScaling: new ExponentialValue(1.5) }),
-        new Variable({ name: "a4", cost: new ExponentialCost(1e20, 70, true), valueScaling: new StepwisePowerSumValue() }),
-        new Variable({ name: "b4", cost: new ExponentialCost(1e25, 800, true), valueScaling: new ExponentialValue(1.5) }),
-        new Variable({ name: "a5", cost: new ExponentialCost(1e100, 250, true), valueScaling: new StepwisePowerSumValue() }),
-        new Variable({ name: "b5", cost: new ExponentialCost(1e110, 900, true), valueScaling: new ExponentialValue(1.5) })
+        new Variable({ name: "tdot", cost: new ExponentialCost(1e5, 1e5), valueScaling: new ExponentialValue(10) }),
+        new Variable({ name: "a1", cost: new FirstFreeCost(new ExponentialCost(2, 3)), valueScaling: new StepwisePowerSumValue() }),
+        new Variable({ name: "b1", cost: new ExponentialCost(1e3, 500), valueScaling: new ExponentialValue(1.5) }),
+        new Variable({ name: "a2", cost: new ExponentialCost(30, 5), valueScaling: new StepwisePowerSumValue() }),
+        new Variable({ name: "b2", cost: new ExponentialCost(1e3, 600), valueScaling: new ExponentialValue(1.5) }),
+        new Variable({ name: "a3", cost: new ExponentialCost(1e4, 15), valueScaling: new StepwisePowerSumValue() }),
+        new Variable({ name: "b3", cost: new ExponentialCost(1e5, 700), valueScaling: new ExponentialValue(1.5) }),
+        new Variable({ name: "a4", cost: new ExponentialCost(1e20, 70), valueScaling: new StepwisePowerSumValue() }),
+        new Variable({ name: "b4", cost: new ExponentialCost(1e25, 800), valueScaling: new ExponentialValue(1.5) }),
+        new Variable({ name: "a5", cost: new ExponentialCost(1e100, 250), valueScaling: new StepwisePowerSumValue() }),
+        new Variable({ name: "b5", cost: new ExponentialCost(1e110, 900), valueScaling: new ExponentialValue(1.5) })
     ];
     this.updateMilestones();
   }
@@ -112,7 +120,7 @@ class vfSim extends theoryClass<theory> {
         e0 = add(r0, r1, r2, r3, r4);
         e1 = add(r0 + add(r1, r2, r3, r4), r1 + add(r2, r3, r4), r2 + add(r3, r4), r3 + r4);
         e2 = add(r0 + add(r1 + add(r2, r3, r4), r2 + add(r3, r4), add(r3, r4)), r1 + add(r2 + add(r3, r4), r3 + r4), r2 + r3 + r4);
-        e3 = add(r0 + add(r1 + add(r2 + add(r3, r4), r3 + r4), r2 + r3 + r4), r1 * r2 * r3 * r4);
+        e3 = add(r0 + add(r1 + add(r2 + add(r3, r4), r3 + r4), r2 + r3 + r4), r1 + r2 + r3 + r4);
         e4 = r0 + r1 + r2 + r3 + r4;
     } else if (this.variables[7].level > 0) {
         e0 = add(r0, r1, r2, r3);
@@ -132,7 +140,7 @@ class vfSim extends theoryClass<theory> {
 
     this.t_var += (this.variables[0].level / 5 + 0.2) * this.dt;
 
-    const rhodot = this.totMult + l10(this.t_var) + e0 * 2/2 + e1 * 2/3 + e2 * 2/4 + e3 * 2/5 + e4 * 2/6;
+    const rhodot = this.totMult + l10(this.t_var) + e0*2/2 + e1*2/3 + e2*2/4 + e3*2/5 + e4*2/6;
     this.rho.add(rhodot + l10(this.dt));
   }
 }
