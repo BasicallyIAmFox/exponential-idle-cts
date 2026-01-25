@@ -69,6 +69,8 @@ var init = () => {
         tdot.maxLevel = 4;
     }
 
+    a = [];
+    b = [];
     for (let i = 1; i <= 5; i++) {
         let id = 1 + 2 * (i - 1);
 
