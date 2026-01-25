@@ -15,30 +15,30 @@ var currencyDot;
 var quaternaryEntries = [];
 
 var pubPower = 0.15;
-var tauRate = 0.3;
+var tauRate = 0.5;
 var pubExp = pubPower / tauRate;
-var pubDivisor = 5;
+var pubMulti = 5;
 var getTau = () => currency.value.pow(tauRate);
 var getCurrencyFromTau = (tau) => [tau.max(BigNumber.ONE).pow(1 / tauRate), currency.symbol];
-var getPublicationMultiplier = (tau) => tau.pow(pubExp) / pubDivisor;
-var getPublicationMultiplierFormula = (symbol) => `\\frac{${symbol}^{${pubExp.toFixed(3)}}}{${pubDivisor}}`;
+var getPublicationMultiplier = (tau) => tau.pow(pubExp) * pubMulti;
+var getPublicationMultiplierFormula = (symbol) => `{${pubMulti}}{${symbol}^{${pubExp.toFixed(3)}}}`;
 
 var t;
 var tdot;
 
 var a, b;
 var aCost = [
-    new FirstFreeCost(new ExponentialCost(5, 2)),
-    new ExponentialCost(5, 2),
-    new ExponentialCost(5, 2),
-    new ExponentialCost(5, 4),
-    new ExponentialCost(5, 5)
+    new FirstFreeCost(new ExponentialCost(2, Math.log2(3))),
+    new ExponentialCost(30, Math.log2(5)),
+    new ExponentialCost(1e4, Math.log2(15)),
+    new ExponentialCost(1e20, Math.log2(70)),
+    new ExponentialCost(1e100, Math.log2(250))
 ], bCost = [
-    new ExponentialCost(50, 500),
-    new ExponentialCost(50, 500),
-    new ExponentialCost(50, 500),
-    new ExponentialCost(50, 500),
-    new ExponentialCost(50, 500)
+    new ExponentialCost(1e3, Math.log2(500)),
+    new ExponentialCost(1e3, Math.log2(600)),
+    new ExponentialCost(1e5, Math.log2(700)),
+    new ExponentialCost(1e25, Math.log2(800)),
+    new ExponentialCost(1e110, Math.log2(900))
 ];
 var e_k, n;
 
@@ -62,7 +62,7 @@ var init = () => {
     // Regular Upgrades
 
     {
-        let tdot = theory.createUpgrade(0, currency, new ExponentialCost(1e5, Math.log2(1e5)));
+        tdot = theory.createUpgrade(0, currency, new ExponentialCost(1e5, Math.log2(1e5)));
         tdot.getDescription = (_) => Utils.getMath(`\\dot{t} = ${getTdot(tdot.level)}`);
         tdot.getInfo = (amount) => Utils.getMathTo(`\\dot{t} = ${getTdot(tdot.level)}`, `\\dot{t} = ${getTdot(tdot.level + amount)}`);
         tdot.boughtOrRefunded = (_) => updateAvailability();
@@ -90,15 +90,14 @@ var init = () => {
 
     ///////////////////
     // Permanent Upgrades
-    theory.createPublicationUpgrade(0, currency, 1e8);
-    theory.createBuyAllUpgrade(1, currency, 1e15);
+    theory.createPublicationUpgrade(0, currency, 1e12);
+    theory.createBuyAllUpgrade(1, currency, 1e25);
     theory.createAutoBuyerUpgrade(2, currency, 1e30);
 
     {
         aiPerma = theory.createPermanentUpgrade(3, currency, new CustomCost(level => {
-            const cost = 15;
-            cost = Math.pow(cost, level);
-            return BigNumber.TEN.pow(cost);
+            if (level == 0) return BigNumber.TEN.pow(20);
+            if (level == 1) return BigNumber.TEN.pow(150);
         }));
         aiPerma.getDescription = (_) => `Unlock ${Utils.getMath(`a`)} milestone lv ${aiPerma.level + 1}`;
         aiPerma.getInfo = (_) => `Milestone: ${Localization.getUpgradeUnlockInfo(`a_${aiPerma.level + 4}`)}`;
@@ -108,11 +107,9 @@ var init = () => {
 
     {
         biPerma = theory.createPermanentUpgrade(4, currency, new CustomCost(level => {
-            const cost = 10;
-            if (level >= 1) cost += 25;
-            if (level >= 2) cost += 50;
-            if (level >= 3) cost += 100;
-            return BigNumber.TEN.pow(cost);
+            if (level == 0) return BigNumber.TEN.pow(15);
+            if (level == 1) return BigNumber.TEN.pow(50);
+            if (level == 2) return BigNumber.TEN.pow(200);
         }));
         biPerma.getDescription = (_) => `Unlock ${Utils.getMath(`b`)} milestone lv ${biPerma.level + 1}`;
         biPerma.getInfo = (_) => `Milestone: ${Localization.getUpgradeUnlockInfo(`b_${biPerma.level + 3}`)}`;
@@ -122,7 +119,19 @@ var init = () => {
 
     /////////////////////
     // Checkpoint Upgrades
-    theory.setMilestoneCost(new LinearCost(25, 25));
+    theory.setMilestoneCost(new CustomCost(level => {
+        let cost;
+        if (level == 0) cost = 13;
+        if (level == 1) cost = 25;
+        if (level == 2) cost = 30;
+        if (level == 3) cost = 40;
+        if (level == 4) cost = 60;
+        if (level == 5) cost = 115;
+        if (level == 6) cost = 150;
+        if (level == 7) cost = 200;
+        if (level >= 8) cost = 300;
+        return BigNumber.from(cost * tauRate);
+    }));
 
     {
         aiMs = theory.createMilestoneUpgrade(0, 2);
@@ -141,7 +150,7 @@ var init = () => {
     }
 
     {
-        aiExpMs = theory.createMilestoneUpgrade(2, 3);
+        aiExpMs = theory.createMilestoneUpgrade(2, 5);
         aiExpMs.description = Localization.getUpgradeIncCustomExpDesc("a_i", "0.03");
         aiExpMs.info = Localization.getUpgradeIncCustomExpInfo("a_i", "0.03");
         aiExpMs.boughtOrRefunded = (_) => theory.invalidateSecondaryEquation();
@@ -213,23 +222,35 @@ var tick = (elapsedTime, multiplier) => {
         n = 0;
     }
 
+    t += getTdot(tdot.level) * dt;
     if (n == 0) {
         currencyDot = BigNumber.ZERO;
     } else {
         currencyDot = BigNumber.ONE;
         for (let i = 0; i < n; i++) {
-            currencyDot *= e_k[i].pow(2 / (2 + i));
+            currencyDot *= e_k[i].max(BigNumber.ONE).pow(2 / (2 + i));
         }
         currencyDot = currencyDot.abs() * bonus;
     }
+    currencyDot *= t.max(BigNumber.ONE);
 
-    t += getTdot(tdot.level) * dt;
-    currency.value += t.max(BigNumber.ONE) * currencyDot * dt;
+    currency.value += currencyDot * dt;
     theory.invalidateTertiaryEquation();
     theory.invalidateQuaternaryValues();
 };
 
+var getInternalState = () => JSON.stringify({
+    t: t.toBase64String()
+});
+
+var setInternalState = (stateStr) => {
+    if (!stateStr) return;
+    var state = JSON.parse(stateStr);
+    t = BigNumber.fromBase64String(state.t);
+};
+
 var postPublish = () => {
+    t = BigNumber.ZERO;
     updateAvailability();
 };
 
@@ -238,7 +259,7 @@ var getPrimaryEquation = () => {
     theory.primaryEquationHeight = 120;
 
     let result = `\\begin{array}{cl}`;
-    result += `\\dot{${currency.symbol}} = |\\prod_{k = 1}^{n} {e_{k}^{\\frac{2}{1 + k}}}|`;
+    result += `\\dot{${currency.symbol}} = t \\prod_{k = 1}^{n} {{\\max(1, e_k)}^{\\frac{2}{1 + k}}}`;
     result += `\\\\ \\\\`; // Intentional double newline
     result += `e_k = \\sum_{\\begin{array}{cl} I \\subseteq \\{1, \\cdots, n \\} \\\\ |I| = k \\end{array}} \\prod_{i \\in I} {r_{i}}`;
     result += `\\end{array}`;
@@ -262,7 +283,7 @@ var getSecondaryEquation = () => {
 
 var getTertiaryEquation = () => {
     let result = `\\begin{matrix}`;
-    result += `\\dot{${currency.symbol}} = ${currencyDot} ,& \\dot{t} = ${getTdot(tdot.level)} \\\\ n = ${n}`;
+    result += `\\dot{${currency.symbol}} = ${currencyDot} ,& \\dot{t} = ${getTdot(tdot.level)} \\\\ n = ${n} ,& t = ${t}`;
     result += `\\end{matrix}`;
     return result;
 };
@@ -300,16 +321,16 @@ var getA = (level) => {
     return Utils.getStepwisePowerSum(level, 2, 10, 0);
 };
 
-const ONE_POINT_THREE = BigNumber.from(1.3);
+const ONE_POINT_FIVE = BigNumber.from(1.5);
 var getB = (level) => {
-    return ONE_POINT_THREE.pow(level);
+    return ONE_POINT_FIVE.pow(level);
 };
 var getBDesc = (level) => {
-    return `{${ONE_POINT_THREE}}^{${level}}`;
+    return `{${ONE_POINT_FIVE}}^{${level}}`;
 };
 
 var getTdot = (level) => {
-    return BigNumber.from(0.25 + 0.25 * level);
+    return BigNumber.from(0.2 + 0.2 * level);
 };
 
 var get2DGraphValue = () => currency.value.sign * (BigNumber.ONE + currency.value.abs()).log10().toNumber();
