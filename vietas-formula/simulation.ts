@@ -30,6 +30,32 @@ class vfSim extends theoryClass<theory> {
         true,
         true,
         true
+      ],
+      VFd: [
+        true,
+        () => this.variables[1].cost + l10(10) < this.variables[2].cost,
+        true,
+        () => this.variables[3].cost + l10(10) < this.variables[4].cost,
+        true,
+        () => this.variables[5].cost + l10(10) < this.variables[6].cost,
+        true,
+        () => this.variables[7].cost + l10(10) < this.variables[8].cost,
+        true,
+        () => this.variables[9].cost + l10(10) < this.variables[10].cost,
+        true
+      ],
+      VFdMS: [
+        true,
+        () => this.variables[1].cost + l10(10) < this.variables[2].cost,
+        true,
+        () => this.variables[3].cost + l10(10) < this.variables[4].cost,
+        true,
+        () => this.variables[5].cost + l10(10) < this.variables[6].cost,
+        true,
+        () => this.variables[7].cost + l10(10) < this.variables[8].cost,
+        true,
+        () => this.variables[9].cost + l10(10) < this.variables[10].cost,
+        true
       ]
     };
     return toCallables(conditions[this.strat]);
@@ -74,15 +100,15 @@ class vfSim extends theoryClass<theory> {
     this.variables = [
         new Variable({ name: "tdot", cost: new ExponentialCost(1e5, 1e5), valueScaling: new ExponentialValue(10) }),
         new Variable({ name: "a1", cost: new FirstFreeCost(new ExponentialCost(2, 3)), valueScaling: new StepwisePowerSumValue() }),
-        new Variable({ name: "b1", cost: new ExponentialCost(1e3, 500), valueScaling: new ExponentialValue(1.5) }),
+        new Variable({ name: "b1", cost: new ExponentialCost(1e3, 500), valueScaling: new ExponentialValue(1.3) }),
         new Variable({ name: "a2", cost: new ExponentialCost(30, 5), valueScaling: new StepwisePowerSumValue() }),
-        new Variable({ name: "b2", cost: new ExponentialCost(1e3, 600), valueScaling: new ExponentialValue(1.5) }),
+        new Variable({ name: "b2", cost: new ExponentialCost(1e3, 600), valueScaling: new ExponentialValue(1.3) }),
         new Variable({ name: "a3", cost: new ExponentialCost(1e4, 15), valueScaling: new StepwisePowerSumValue() }),
-        new Variable({ name: "b3", cost: new ExponentialCost(1e5, 700), valueScaling: new ExponentialValue(1.5) }),
-        new Variable({ name: "a4", cost: new ExponentialCost(1e20, 70), valueScaling: new StepwisePowerSumValue() }),
-        new Variable({ name: "b4", cost: new ExponentialCost(1e25, 800), valueScaling: new ExponentialValue(1.5) }),
-        new Variable({ name: "a5", cost: new ExponentialCost(1e100, 250), valueScaling: new StepwisePowerSumValue() }),
-        new Variable({ name: "b5", cost: new ExponentialCost(1e110, 900), valueScaling: new ExponentialValue(1.5) })
+        new Variable({ name: "b3", cost: new ExponentialCost(1e5, 700), valueScaling: new ExponentialValue(1.3) }),
+        new Variable({ name: "a4", cost: new ExponentialCost(1e15, 30), valueScaling: new StepwisePowerSumValue() }),
+        new Variable({ name: "b4", cost: new ExponentialCost(1e25, 800), valueScaling: new ExponentialValue(1.3) }),
+        new Variable({ name: "a5", cost: new ExponentialCost(1e150, 60), valueScaling: new StepwisePowerSumValue() }),
+        new Variable({ name: "b5", cost: new ExponentialCost(1e160, 900), valueScaling: new ExponentialValue(1.3) })
     ];
     this.updateMilestones();
   }
@@ -109,6 +135,16 @@ class vfSim extends theoryClass<theory> {
     return this.createResult();
   }
   tick() {
+    if (this.strat.includes("MS") && this.lastPub >= 15 && this.lastPub < 300) {
+      if (this.ticks % 20 < 10) {
+        this.milestones[1] += this.milestones[2];
+        this.milestones[2] = Math.max(this.milestones[1] - 3, 0);
+      } else {
+        this.milestones[2] += this.milestones[1];
+        this.milestones[1] = Math.max(this.milestones[2] - 5, 0);
+      }
+    }
+
     const aiExp = 1 + 0.03 * this.milestones[2];
     const r0 = this.variables[1].value * aiExp + this.variables[2].value;
     const r1 = this.variables[3].value * aiExp + this.variables[4].value;
