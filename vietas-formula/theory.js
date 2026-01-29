@@ -184,18 +184,18 @@ var tick = (elapsedTime, multiplier) => {
     let aiExp = 1 + 0.03 * aiExpMs.level;
     let a0 = getA(a[0].level).pow(aiExp), b0 = getB(b[0].level);
     let a1 = getA(a[1].level).pow(aiExp), b1 = getB(b[1].level);
-    let a2 = getA(a[2].level).pow(aiExp), b2 = getB(b[2].level);
-    let a3 = getA(a[3].level).pow(aiExp), b3 = getB(b[3].level);
-    let a4 = getA(a[4].level).pow(aiExp), b4 = getB(b[4].level);
+    let a2 = getA(a[2].level).pow(aiExp), b2 = b[2].isAvailable ? getB(b[2].level) : BigNumber.ZERO;
+    let a3 = a[3].isAvailable ? getA(a[3].level).pow(aiExp) : BigNumber.ZERO, b3 = b[3].isAvailable ? getB(b[3].level) : BigNumber.ZERO;
+    let a4 = a[4].isAvailable ? getA(a[4].level).pow(aiExp) : BigNumber.ZERO, b4 = b[4].isAvailable ? getB(b[4].level) : BigNumber.ZERO;
     let r0 = a0 * b0, r1 = a1 * b1, r2 = a2 * b2, r3 = a3 * b3, r4 = a4 * b4;
-    if (a[4].level > 0) {
+    if (a[4].isAvailable && a[4].level > 0) {
         e_k[0] = r0 + r1 + r2 + r3 + r4;
         e_k[1] = r0 * (r1 + r2 + r3 + r4) + r1 * (r2 + r3 + r4) + r2 * (r3 + r4) + r3 * r4;
         e_k[2] = r0 * (r1 * (r2 + r3 + r4) + r2 * (r3 + r4) + r3 * r4) + r1 * (r2 * (r3 + r4) + r3 * r4) + r2 * r3 * r4;
         e_k[3] = r0 * (r1 * (r2 * (r3 + r4) + r3 * r4) + r2 * r3 * r4) + r1 * r2 * r3 * r4;
         e_k[4] = r0 * r1 * r2 * r3 * r4;
         n = 5;
-    } else if (a[3].level > 0) {
+    } else if (a[3].isAvailable && a[3].level > 0) {
         e_k[0] = r0 + r1 + r2 + r3;
         e_k[1] = r0 * (r1 + r2 + r3) + r1 * (r2 + r3) + r2 * r3;
         e_k[2] = r0 * (r1 * (r2 + r3) + r2 * r3) + r1 * r2 * r3;
