@@ -157,7 +157,5 @@ class vfSim extends theoryClass<theory> {
 
     const rhodot = this.totMult + l10(this.t_var) + e0*2/2 + e1*2/3 + e2*2/4 + e3*2/5 + e4*2/6;
     this.rho.add(rhodot + l10(this.dt));
-
-    this.tauFactor = (Math.log(1 + this.maxRho) / Math.log(600)) / Math.log(this.maxRho);
   }
 }
