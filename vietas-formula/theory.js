@@ -8,7 +8,7 @@ var id = "vietas_formula";
 var name = "Vieta's Formula";
 var description = "A custom theory based on Vieta's Formula.";
 var authors = "BasicallyIAmFox";
-var version = 1;
+var version = 2;
 
 var currency;
 var currencyDot;
