@@ -183,9 +183,9 @@ var getTemperature = (level) => 5 * Utils.getStepwisePowerSum(level, 2, 10, 0);
 
 var getUpgradeListDelegate = () => {
     let upgradeBuyables = [];
-    for (let i = 0; i < theory.upgrades().length; i++) {
-        const upgrade = theory.upgrades()[i];
-        
+    for (let i = 0; i < theory.upgrades.length; i++) {
+        const upgrade = theory.upgrades[i];
+
         upgradeBuyables.push(ui.createStackLayout({
             children: [
                 ui.createLatexLabel({
