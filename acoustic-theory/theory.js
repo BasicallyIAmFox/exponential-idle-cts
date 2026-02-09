@@ -43,6 +43,7 @@ var I = [BigNumber.ZERO, BigNumber.ZERO, BigNumber.ZERO];
 var c1, c2, v1, v2, v3, p, temperature;
 var msDimension, msTemperature;
 
+var upgradeGroups = [];
 var quaternaryEntries = [];
 
 var init = () => {
@@ -56,34 +57,38 @@ var init = () => {
         c1.getInfo = (amount) => Utils.getMathTo(getInfo(c1.level), getInfo(c1.level + amount));
     }
     {
-        let getDesc = (level) => `c_2=${getC2(level).toString(0)}`;
-        let getInfo = (level) => `c_2=2^{${level}}`;
+        let getDesc = (level) => `c_2=2^{${level}}`;
+        let getInfo = (level) => `c_2=${getC2(level).toString(0)}`;
         c2 = theory.createUpgrade(1, currency, new FreeCost());
         c2.getDescription = (_) => Utils.getMath(getDesc(c2.level));
         c2.getInfo = (amount) => Utils.getMathTo(getInfo(c2.level), getInfo(c2.level + amount));
     }
+    upgradeGroups.push([c1, c2]);
 
     {
-        let getDesc = (level) => `v_1=`;
-        let getInfo = (level) => `v_1=`;
+        let getDesc = (level) => `v_1=${getV1(level).toString(0)}`;
+        let getInfo = (level) => `v_1=${getV1(level).toString(0)}`;
         v1 = theory.createUpgrade(2, currency, new FreeCost());
         v1.getDescription = (_) => Utils.getMath(getDesc(v1.level));
         v1.getInfo = (amount) => Utils.getMathTo(getInfo(v1.level), getInfo(v1.level + amount));
     }
     {
-        let getDesc = (level) => `v_2=`;
-        let getInfo = (level) => `v_2=`;
+        let getDesc = (level) => `v_2=${getV2(level).toString(0)}`;
+        let getInfo = (level) => `v_2=${getV2(level).toString(0)}`;
         v2 = theory.createUpgrade(3, currency, new FreeCost());
         v2.getDescription = (_) => Utils.getMath(getDesc(v2.level));
         v2.getInfo = (amount) => Utils.getMathTo(getInfo(v2.level), getInfo(v2.level + amount));
     }
     {
-        let getDesc = (level) => `v_3=`;
-        let getInfo = (level) => `v_3=`;
+        let getDesc = (level) => `v_3=2^{${level}}`;
+        let getInfo = (level) => `v_3=${getV3(level).toString(0)}`;
         v3 = theory.createUpgrade(4, currency, new FreeCost());
         v3.getDescription = (_) => Utils.getMath(getDesc(v3.level));
         v3.getInfo = (amount) => Utils.getMathTo(getInfo(v3.level), getInfo(v3.level + amount));
     }
+    upgradeGroups.push(v1);
+    upgradeGroups.push(v2);
+    upgradeGroups.push(v3);
 
     {
         let getDesc = (level) => `p=${getP(level).toString(0)}`;
@@ -92,6 +97,7 @@ var init = () => {
         p.getDescription = (_) => Utils.getMath(getDesc(p.level));
         p.getInfo = (amount) => Utils.getMathTo(getInfo(p.level), getInfo(p.level + amount));
     }
+    upgradeGroups.push(p);
 
     {
         let suffix = `\\text{ K}`;
@@ -101,6 +107,7 @@ var init = () => {
         temperature.getDescription = (_) => Utils.getMath(getDesc(temperature.level));
         temperature.getInfo = (amount) => Utils.getMathTo(getInfo(temperature.level), getInfo(temperature.level + amount));
     }
+    upgradeGroups.push(temperature);
 
     theory.createStoryChapter(0, "The Beginnings", `You are an young engineer
         who is intrigued by the topic of acoustics.
@@ -120,15 +127,15 @@ var tick = (elapsedTime, multiplier) => {
     let dt = BigNumber.from(elapsedTime);
     let bonus = theory.publicationMultiplier * multiplier;
 
-    let v1 = getV1(v1.level);
-    let v2 = getV2(v2.level);
-    let v3 = getV3(v3.level);
+    let v1Var = getV1(v1.level);
+    let v2Var = getV2(v2.level);
+    let v3Var = getV3(v3.level);
     let pressureVar = getP(p.level);
     let temperatureVar = getTemperature(temperature.level);
 
-    v[0] += dt * v1 * v2;
-    v[1] += dt * v2 * v3;
-    v[2] += dt * v3 * v1;
+    v[0] += dt * v1Var * v2Var;
+    v[1] += dt * v2Var * v3Var;
+    v[2] += dt * v3Var * v1Var;
     I[0] = pressureVar * v[0];
     I[1] = pressureVar * v[1];
     I[2] = pressureVar * v[2];
@@ -154,7 +161,7 @@ var getPrimaryEquation = () => {
 };
 
 var getSecondaryEquation = () => {
-    let result = `\\begin{matrix}{cl}`;
+    let result = `\\begin{matrix}`;
     result += `\\gamma \\approx 331.32`;
     result += `\\end{matrix}`;
     return result;
@@ -175,96 +182,123 @@ var getQuaternaryEntries = () => {
 
 var getC1 = (level) => Utils.getStepwisePowerSum(level, 2, 10, 0);
 var getC2 = (level) => BigNumber.TWO.pow(level);
-var getV1 = (level) => Utils.getStepwisePowerSum(level, 2, 10, 0);
-var getV2 = (level) => Utils.getStepwisePowerSum(level, 2, 10, 0);
+var getV1 = (level) => Utils.getStepwisePowerSum(level, 2, 6, 0);
+var getV2 = (level) => Utils.getStepwisePowerSum(level, 2, 8, 0);
 var getV3 = (level) => BigNumber.TWO.pow(level);
-var getP = (level) => Utils.getStepwisePowerSum(level, 2, 8, 1);
+var getP = (level) => Utils.getStepwisePowerSum(level, 2, 5, 1);
 var getTemperature = (level) => 5 * Utils.getStepwisePowerSum(level, 2, 10, 0);
 
 var getUpgradeListDelegate = () => {
-    let upgradeBuyables = [];
-    for (let i = 0; i < theory.upgrades.length; i++) {
-        const upgrade = theory.upgrades[i];
+    const createUpgradeBuyable = (upgrade) => {
+        const buyableDescription = ui.createLatexLabel({
+            horizontalOptions: LayoutOptions.START,
+            verticalTextAlignment: TextAlignment.CENTER,
+            margin: new Thickness(15, 0, 15, 0),
+            textColor: Color.TEXT,
+            text: () => {
+                return upgrade.getDescription(upgrade.level);
+            },
+            fontSize: 10
+        });
+        const buyableCost = ui.createLabel({
+            horizontalTextAlignment: TextAlignment.END,
+            fontFamily: FontFamily.CMU_REGULAR,
+            verticalTextAlignment: TextAlignment.START,
+            textColor: Color.TEXT,
+            margin: new Thickness(15, 5, 10, 0),
+            fontSize: 16,
+            text: () => {
+                if (theory.buyAmountUpgrades == -1) {
+                    let max = Math.max(upgrade.cost.getMax(upgrade.level, upgrade.level + theory.buyAmountUpgrades), 1);
+                    let cost = upgrade.cost.getSum(upgrade.level, upgrade.level + max);
+                    if (cost == BigNumber.ZERO) return Localization.get("BuyablesCostFree");
+                    return `(x${upgrade.cost.getMax(upgrade.level, upgrade.currency.value)}) ${cost}${upgrade.currency.symbol}`;
+                } else {
+                    let cost = upgrade.cost.getSum(upgrade.level, upgrade.level + theory.buyAmountUpgrades);
+                    if (cost == BigNumber.ZERO) return Localization.get("BuyablesCostFree");
+                    return `(x${theory.buyAmountUpgrades}) ${cost}${upgrade.currency.symbol}`;
+                }
+            }
+        });
+        const buyableLevel = ui.createLabel({
+            horizontalTextAlignment: TextAlignment.END,
+            fontFamily: FontFamily.CMU_REGULAR,
+            verticalTextAlignment: TextAlignment.END,
+            textColor: Color.TEXT_MEDIUM,
+            margin: new Thickness(10, 0, 10, 4),
+            fontSize: 12,
+            text: () => {
+                return Localization.format(Localization.get("BuyablesLevel"), upgrade.level);
+            }
+        });
 
-        upgradeBuyables.push(ui.createStackLayout({
-            children: [
-                ui.createLatexLabel({
-                    horizontalOptions: LayoutOptions.START,
-                    textAlignment: TextAlignment.LEFT,
-                    margin: new Thickness(15, 0, 15, 0),
-                    textColor: Color.TEXT,
-                    text: upgrade.getDescription,
-                    fontSize: 20
-                }),
-                ui.createLabel({
-                    horizontalTextAlignment: TextAlignment.LEFT,
-                    fontFamily: FontFamily.CMU_REGULAR,
-                    verticalTextAlignment: TextAlignment.END,
-                    textColor: Color.TEXT, // TODO: Color.
-                    margin: new Thickness(10, 0, 10, 4),
-                    fontSize: 14,
-                    text: () => {
-                        return `Level: ${upgrade.level}`;
-                    }
-                }),
-                ui.createLabel({
-                    horizontalTextAlignment: TextAlignment.LEFT,
-                    verticalTextAlignment: TextAlignment.END,
-                    textColor: Color.TEXT,
-                    margin: new Thickness(10, 5, 10, 0),
-                    fontSize: 16,
-                    text: () => {
-                        return `(x${upgrade.cost.getMax(upgrade.level, upgrade.currency)}) ${upgrade.currency.symbol}`;
-                    }
-                })
-            ]
-        }));
+        const deactivatedBuyableBox = ui.createGrid({
+            widthRequest: 8,
+            backgroundColor: Color.DEACTIVATED_UPGRADE,
+            margin: new Thickness(0, 0, 0, 0),
+            horizontalOptions: LayoutOptions.START,
+            isVisible: () => !upgrade.isAutoBuyable
+        });
+
+        const buyableFrame = ui.createFrame({
+            backgroundColor: Color.MEDIUM_BACKGROUND,
+            borderColor: Color.BORDER,
+            cornerRadius: 0,
+            hasShadow: false,
+            padding: new Thickness(0, 0, 5, 0),
+            onTouched: (e) => {
+                if (e.type == TouchType.SHORTPRESS_RELEASED) {
+                    upgrade.buy(theory.buyAmountUpgrades);
+                }
+            }, // TODO: Binding RequestBuyCommand
+            content: ui.createGrid({
+                children: [ buyableDescription, buyableLevel, buyableCost, deactivatedBuyableBox ]
+            })
+        });
+
+        return ui.createGrid({
+            heightRequest: 50,
+            children: [ buyableFrame ]
+        });
     }
 
-    return ui.createGrid({
-        columnDefinitions: ["100", "100*"],
-        children: [
-            ui.createCheckBox({
-                color: Color.TEXT,
-                margin: new Thickness(0, 0, 0, 0),
-                horizontalOptions: LayoutOptions.CENTER,
-                translationX: 0,
-                scale: 1.25,
-                opacity: 0.5,
-                // TODO: IsChecked="{Binding IsActive}"
-                isVisible: true, // TODO: Binding IsToggleVisible
-                onCheckedChanged: () => {
-                    log('RequestToggleActiveCommand');
-                    log('RequestToggleAllActiveCommand');
-                },
-                column: 0
-            }),
-            ui.createImage({
-                source: ImageSource.REFUND,
-                margin: new Thickness(5, 0, 5, 0),
-                heightRequest: 36,
-                isVisible: true, // TODO: Binding IsRefundVisible
-                opacity: 0.5, // TODO: Binding RefundOpacity
-                onTouched: () => {
-                    log('RequestRefundActiveCommand');
-                } // TODO: Binding RequestRefundActiveCommand
-            }),
-            ui.createFrame({
-                backgroundColor: Color.MEDIUM_BACKGROUND,
-                borderColor: Color.BORDER,
-                cornerRadius: 0,
-                hasShadow: false,
-                padding: new Thickness(0, 0, 0, 0),
-                onTouched: () => {
-                    log('RequestBuyCommand');
-                }, // TODO: Binding RequestBuyCommand
-                column: 1,
-                content: ui.createGrid({
-                    children: upgradeBuyables
-                })
-            })
-        ]
+    let upgradeBuyables = [];
+    for (let i = 0; i < upgradeGroups.length; i++) {
+        if (upgradeGroups[i].length !== undefined) {
+            const definitions = [];
+            const layouts = [];
+            for (let j = 0; j < upgradeGroups[i].length; j++) {
+                const layout = createUpgradeBuyable(upgradeGroups[i][j]);
+                layout.column = j;
+                layouts.push(layout);
+                definitions.push("*");
+            }
+            const grid = ui.createGrid({
+                columnDefinitions: definitions,
+                children: layouts,
+                row: upgradeBuyables.length
+            });
+            upgradeBuyables.push(grid);
+        } else {
+            const grid = createUpgradeBuyable(upgradeGroups[i]);
+            grid.row = upgradeBuyables.length;
+            upgradeBuyables.push(grid);
+        }
+    }
+    const buyableLayout = ui.createGrid({
+        horizontalOptions: LayoutOptions.FILL_AND_EXPAND,
+        rowSpacing: 2,
+        columnSpacing: 0,
+        padding: new Thickness(0, 0, 0, 0),
+        children: upgradeBuyables
     });
+
+    const grid = ui.createGrid({
+        rowDefinitions: ["36", "*"],
+        children: [ ui.createScrollView({ content: buyableLayout, row: 1 }) ]
+    });
+
+    return grid;
 };
 
 init();
