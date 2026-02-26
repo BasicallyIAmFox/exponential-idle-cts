@@ -178,6 +178,9 @@ var updateAvailability = () => {
 };
 
 var getInternalState = () => JSON.stringify({
+    rhoN: rhoN.toBase64String(),
+    rhoNm1: rhoNm1.toBase64String(),
+    rhoNm2: rhoNm2.toBase64String(),
     q1: q1.toBase64String(),
     q2: q2.toBase64String(),
     q3: q3.toBase64String(),
@@ -188,6 +191,9 @@ var setInternalState = (stateStr) => {
     if(!stateStr) return;
 
     let state = JSON.parse(stateStr);
+    rhoN = BigNumber.fromBase64String(state.rhoN) ?? rhoN;
+    rhoNm1 = BigNumber.fromBase64String(state.rhoNm1) ?? rhoNm1;
+    rhoNm2 = BigNumber.fromBase64String(state.rhoNm2) ?? rhoNm2;
     q1 = BigNumber.fromBase64String(state.q1) ?? q1;
     q2 = BigNumber.fromBase64String(state.q2) ?? q2;
     q3 = BigNumber.fromBase64String(state.q3) ?? q3;
