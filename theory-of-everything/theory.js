@@ -177,6 +177,23 @@ var updateAvailability = () => {
     r2.isAvailable = msR.level > 0;
 };
 
+var getInternalState = () => JSON.stringify({
+    q1: q1.toBase64String(),
+    q2: q2.toBase64String(),
+    q3: q3.toBase64String(),
+    r: r.toBase64String()
+});
+
+var setInternalState = (stateStr) => {
+    if(!stateStr) return;
+
+    let state = JSON.parse(stateStr);
+    q1 = BigNumber.fromBase64String(state.q1) ?? q1;
+    q2 = BigNumber.fromBase64String(state.q2) ?? q2;
+    q3 = BigNumber.fromBase64String(state.q3) ?? q3;
+    r = BigNumber.fromBase64String(state.r) ?? r;
+};
+
 var tick = (elapsedTime, multiplier) => {
     let dt = BigNumber.from(elapsedTime * multiplier);
     let bonus = theory.publicationMultiplier;
