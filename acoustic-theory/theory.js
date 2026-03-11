@@ -205,7 +205,7 @@ var setInternalState = (stateStr) => {
 var tick = (elapsedTime, multiplier) => {
     if (c1.level == 0) return;
 
-    let dt = BigNumber.from(elapsedTime);
+    let dt = BigNumber.from(elapsedTime * 100);
     let bonus = theory.publicationMultiplier * multiplier;
 
     let c1Var = getC1(c1.level);
