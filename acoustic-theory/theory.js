@@ -37,10 +37,10 @@ var authors = "BasicallyIAmFox";
 var version = 1;
 
 var currency;
-var rhodot;
-var a, adot;
-var T, Tdot;
-var c, W, f, k, D;
+var rhodot = BigNumber.ZERO;
+var a, adot = BigNumber.ZERO;
+var T, Tdot = BigNumber.ZERO;
+var c = BigNumber.ZERO, W = BigNumber.ZERO, I = BigNumber.ZERO, f = BigNumber.ZERO, k = BigNumber.ZERO, D = BigNumber.ZERO;
 
 var c1, c2;
 var a1, a2;
@@ -49,6 +49,52 @@ var S;
 
 var quaternaryEntries = [];
 var stage = 1;
+
+// taken from MF
+var numberFormat = (value, decimals, negExpFlag=false) => {
+    if (value >= BigNumber.ZERO)
+    {
+        if (value >= BigNumber.from(0.1) || value == BigNumber.ZERO) 
+        {
+            if (value > BigNumber.ZERO && value < BigNumber.ONE && decimals < 3)
+            {
+                return value.toString(3);
+            }
+            return value.toString(decimals);
+        }
+        else
+        {
+            let exp = Math.floor((value*BigNumber.from(1+1e-5)).log10().toNumber());
+            let mts = (value * BigNumber.TEN.pow(-exp)).toString(decimals);
+            if (mts.startsWith('10')) {
+                mts = (value * BigNumber.TEN.pow(-exp) / 10).toString(decimals)
+                exp++;
+            }
+            if (exp > 0 || !negExpFlag)
+            {
+                return `${mts}e${exp}`;
+            }
+            else
+            {
+                return `${mts}e$\\,-$${-exp}`;
+            }
+        }
+    }
+    else
+    {
+        value = -value;
+        if (value >= BigNumber.from(0.1) || value == BigNumber.ZERO) 
+        {
+            return (-value).toString(decimals);
+        }
+        else
+        {
+            let exp = Math.floor((value*BigNumber.from(1+1e-5)).log10().toNumber());
+            let mts = (value * BigNumber.TEN.pow(-exp)).toString(decimals);
+            return `-${mts}e${exp}`;
+        }
+    }
+}
 
 var init = () => {
     currency = theory.createCurrency();
@@ -66,7 +112,7 @@ var init = () => {
     {
         let getDesc = (level) => `c_2=2^{${level}}`;
         let getInfo = (level) => `c_2=${getC2(level).toString(0)}`;
-        c2 = theory.createUpgrade(1, currency, new ExponentialCost(1000, Math.log2(10)));
+        c2 = theory.createUpgrade(1, currency, new ExponentialCost(100, Math.log2(10)));
         c2.getDescription = (_) => Utils.getMath(getDesc(c2.level));
         c2.getInfo = (amount) => Utils.getMathTo(getInfo(c2.level), getInfo(c2.level + amount));
     }
@@ -120,10 +166,8 @@ While it may not seem impressive, it will allow you to dive deeper into the topi
 
 You put the machine into an isolated area to not disturb the neighbors and begin the personal research.`, () => c1.level > 0);
 
-    adot = BigNumber.ZERO;
     a = BigNumber.from(50);
-    Tdot = BigNumber.ZERO;
-    T = BigNumber.ZERO;
+    T = BigNumber.ONE;
 
     updateAvailability();
 };
@@ -140,8 +184,8 @@ var setInternalState = (stateStr) => {
     if(!stateStr) return;
 
     let state = JSON.parse(stateStr);
-    a = if (state.a) BigNumber.fromBase64String(state.a) ?? a else a;
-    T = if (state.T) BigNumber.fromBase64String(state.T) ?? T else T;
+    a = (state.a) ? (BigNumber.fromBase64String(state.a) ?? a) : a;
+    T = (state.T) ? (BigNumber.fromBase64String(state.T) ?? T) : T;
 };
 
 var tick = (elapsedTime, multiplier) => {
@@ -159,19 +203,19 @@ var tick = (elapsedTime, multiplier) => {
     let vs = getS(S.level);
 
     c = 331.3196511181 + 0.6 * T;
-    let I = vp1 * vp1 / (a * c);
+    I = vp1 * vp1 / (a * c);
     W = I * vs;
     D = 10;
     f = 1.84 * c / (Math.PI * D);
     k = 2 * Math.PI * f / c;
 
-    adot = va1 * (40 - a * va2);
+    adot = (va1 / 200) * (40 - a * va2);
     a += dt * adot;
 
-    Tdot = vT1 * vT1 * (T.sqrt() / 10).log2();
+    Tdot = vT1 * vT1 * (2 + T.sqrt() / 10).log2();
     T += dt * Tdot;
 
-    rhodot = bonus * W * c * vc1 * vc2 * k;
+    rhodot = bonus * W * c.pow(1.3) * vc1 * vc2 * k;
     currency.value += dt * rhodot;
 
     theory.invalidatePrimaryEquation();
@@ -188,15 +232,19 @@ var postPublish = () => {
 var getPrimaryEquation = () => {
     let result = ``;
     if (stage === 0) {
+        theory.primaryEquationHeight = 80;
+
         result += `W = I S`;
         result += `\\\\`;
         result += `I = \\frac{p^2}{a c}`;
     } else if (stage === 1) {
-        result += `\\dot{\\rho} = W c c_1 c_2 k`;
+        theory.primaryEquationHeight = 110;
+
+        result += `\\dot{\\rho} = W c^{1.3} c_1 c_2 k`;
         result += `\\\\`;
-        result += `\\dot{a} = a_1 (40 - \\frac{a}{a_2})`;
+        result += `\\dot{a} = \\frac{a_1}{200} (40 - \\frac{a}{a_2})`;
         result += `\\\\`;
-        result += `\\dot{T} = T_1^2 \\log_2(\\frac{\\sqrt{T}}{10})`;
+        result += `\\dot{T} = T_1^2 \\log_2(2 + \\sqrt{T} / 10)`;
     }
     result += ``;
     return result;
@@ -206,7 +254,7 @@ var getSecondaryEquation = () => {
     let result = `\\begin{matrix}`;
     if (stage == 0) {
         result += `f = \\frac{1.84 c}{\\pi D}`;
-        result += `\\\\`;
+        result += `&`;
         result += `k = 2 \\pi \\frac{f}{c}`;
     } else if (stage == 1) {
         result += `c = 331.32 + 0.6 T`;
@@ -228,6 +276,7 @@ var getQuaternaryEntries = () => {
     if (quaternaryEntries.length == 0) {
         if (stage == 0) {
             quaternaryEntries.push(new QuaternaryEntry("f", null));
+            quaternaryEntries.push(new QuaternaryEntry("I", null));
             quaternaryEntries.push(new QuaternaryEntry("D", null));
             quaternaryEntries.push(new QuaternaryEntry("k", null));
             quaternaryEntries.push(new QuaternaryEntry("\\dot{a}", null));
@@ -243,16 +292,17 @@ var getQuaternaryEntries = () => {
 
     if (stage == 0) {
         quaternaryEntries[0].value = f.toString(2);
-        quaternaryEntries[1].value = D.toString(2);
-        quaternaryEntries[2].value = k.toString(2);
-        quaternaryEntries[3].value = adot.toString(2);
-        quaternaryEntries[4].value = Tdot.toString(2);
+        quaternaryEntries[1].value = numberFormat(I, 2);
+        quaternaryEntries[2].value = D.toString(2);
+        quaternaryEntries[3].value = k.toString(2);
+        quaternaryEntries[4].value = adot.toString(2);
+        quaternaryEntries[5].value = Tdot.toString(2);
     } else if (stage == 1) {
-        quaternaryEntries[0].value = rhodot.toString(2);
+        quaternaryEntries[0].value = rhodot.toString(3);
         quaternaryEntries[1].value = a.toString(2);
         quaternaryEntries[2].value = T.toString(2);
         quaternaryEntries[3].value = c.toString(2);
-        quaternaryEntries[4].value = W.toString(2);
+        quaternaryEntries[4].value = numberFormat(W, 2);
     }
 
     return quaternaryEntries;
@@ -282,9 +332,9 @@ var goToNextStage = () => {
 
 var getC1 = (level) => Utils.getStepwisePowerSum(level, 2, 10, 0);
 var getC2 = (level) => BigNumber.TWO.pow(level);
-var getA1 = (level) => Utils.getStepwisePowerSum(level, 2, 5, 0);
+var getA1 = (level) => Utils.getStepwisePowerSum(level, 2, 5, 1);
 var getA2Reverse = (level) => BigNumber.from(1 / 0.8).pow(level);
-var getT1 = (level) => Utils.getStepwisePowerSum(level, 2, 10, 0);
+var getT1 = (level) => Utils.getStepwisePowerSum(level, 2, 10, 1);
 var getS = (level) => Utils.getStepwisePowerSum(level, 100, 100, 1);
 
 const pubPower = 0.1;
