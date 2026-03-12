@@ -128,7 +128,7 @@ var init = () => {
     {
         let getDesc = (level) => `a_2={0.8}^{${level}}`;
         let getInfo = (level) => `a_2=1/${getA2Reverse(level).toString(2)}`;
-        a2 = theory.createUpgrade(3, currency, new ExponentialCost(1e4, Math.log2(1e4)));
+        a2 = theory.createUpgrade(3, currency, new ExponentialCost(1e4, Math.log2(1e2)));
         a2.getDescription = (_) => Utils.getMath(getDesc(a2.level));
         a2.getInfo = (amount) => Utils.getMathTo(getInfo(a2.level), getInfo(a2.level + amount));
     }
