@@ -211,11 +211,12 @@ var tick = (elapsedTime, multiplier) => {
 
     adot = (va1 / 200) * (40 - a * va2);
     a += dt * adot;
+    a = a.max(40 / va2);
 
     Tdot = vT1 * vT1 * (2 + T.sqrt() / 10).log2();
     T += dt * Tdot;
 
-    rhodot = bonus * W * c.pow(1.3) * vc1 * vc2 * k;
+    rhodot = bonus * 10 * W.pow(3.3) * c.pow(4.5) * vc1 * vc2 * k;
     currency.value += dt * rhodot;
 
     theory.invalidatePrimaryEquation();
@@ -240,7 +241,7 @@ var getPrimaryEquation = () => {
     } else if (stage === 1) {
         theory.primaryEquationHeight = 110;
 
-        result += `\\dot{\\rho} = W c^{1.3} c_1 c_2 k`;
+        result += `\\dot{\\rho} = c_1 c_2 k c^{4.5} W^{3.3}`;
         result += `\\\\`;
         result += `\\dot{a} = \\frac{a_1}{200} (40 - \\frac{a}{a_2})`;
         result += `\\\\`;
@@ -328,7 +329,7 @@ var goToNextStage = () => {
 
 var getC1 = (level) => Utils.getStepwisePowerSum(level, 2, 10, 0);
 var getC2 = (level) => BigNumber.TWO.pow(level);
-var getA1 = (level) => Utils.getStepwisePowerSum(level, 2, 5, 1);
+var getA1 = (level) => Utils.getStepwisePowerSum(level, 2, 12, 1);
 var getA2Reverse = (level) => BigNumber.from(1 / 0.8).pow(level);
 var getT1 = (level) => Utils.getStepwisePowerSum(level, 2, 10, 1);
 var getS = (level) => Utils.getStepwisePowerSum(level, 100, 100, 1);
