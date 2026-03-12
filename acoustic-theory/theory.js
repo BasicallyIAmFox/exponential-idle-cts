@@ -279,8 +279,6 @@ var getQuaternaryEntries = () => {
             quaternaryEntries.push(new QuaternaryEntry("I", null));
             quaternaryEntries.push(new QuaternaryEntry("D", null));
             quaternaryEntries.push(new QuaternaryEntry("k", null));
-            quaternaryEntries.push(new QuaternaryEntry("\\dot{a}", null));
-            quaternaryEntries.push(new QuaternaryEntry("\\dot{T}", null));
         } else if (stage == 1) {
             quaternaryEntries.push(new QuaternaryEntry("\\dot{\\rho}", null));
             quaternaryEntries.push(new QuaternaryEntry("a", null));
@@ -295,8 +293,6 @@ var getQuaternaryEntries = () => {
         quaternaryEntries[1].value = numberFormat(I, 2);
         quaternaryEntries[2].value = D.toString(2);
         quaternaryEntries[3].value = k.toString(2);
-        quaternaryEntries[4].value = adot.toString(2);
-        quaternaryEntries[5].value = Tdot.toString(2);
     } else if (stage == 1) {
         quaternaryEntries[0].value = rhodot.toString(3);
         quaternaryEntries[1].value = a.toString(2);
