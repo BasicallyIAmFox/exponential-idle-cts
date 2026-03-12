@@ -296,7 +296,7 @@ var getQuaternaryEntries = () => {
         quaternaryEntries[3].value = k.toString(2);
     } else if (stage == 1) {
         quaternaryEntries[0].value = rhodot.toString(3);
-        quaternaryEntries[1].value = a.toString(2);
+        quaternaryEntries[1].value = numberFormat(a, 3);
         quaternaryEntries[2].value = T.toString(2);
         quaternaryEntries[3].value = c.toString(2);
         quaternaryEntries[4].value = numberFormat(W, 2);
