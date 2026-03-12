@@ -34,19 +34,18 @@ var getDescription = (_) => {
     return `funny yact`;
 };
 var authors = "BasicallyIAmFox";
-var version = 2;
+var version = 1;
 
 var currency;
-var t = BigNumber.ZERO;
-var rhodot = BigNumber.ZERO;
-var c = BigNumber.ZERO;
-var v = [BigNumber.ZERO, BigNumber.ZERO, BigNumber.ZERO];
-var vdot = [BigNumber.ZERO, BigNumber.ZERO, BigNumber.ZERO];
-var I = [BigNumber.ZERO, BigNumber.ZERO, BigNumber.ZERO];
-var I_mean = BigNumber.ZERO;
+var rhodot;
+var a, adot;
+var T, Tdot;
+var c, W, f, k, D;
 
-var c1, c2, v1, v2, v3, p, temperature, a;
-var msMean, msTemperature;
+var c1, c2;
+var a1, a2;
+var T1;
+var S;
 
 var quaternaryEntries = [];
 var stage = 1;
@@ -59,7 +58,7 @@ var init = () => {
     {
         let getDesc = (level) => `c_1=${getC1(level).toString(0)}`;
         let getInfo = (level) => `c_1=${getC1(level).toString(0)}`;
-        c1 = theory.createUpgrade(0, currency, new FirstFreeCost(new ExponentialCost(0.625, Math.log2(1.35))));
+        c1 = theory.createUpgrade(0, currency, new FirstFreeCost(new ExponentialCost(5, Math.log2(2))));
         c1.getDescription = (_) => Utils.getMath(getDesc(c1.level));
         c1.getInfo = (amount) => Utils.getMathTo(getInfo(c1.level), getInfo(c1.level + amount));
     }
@@ -67,60 +66,41 @@ var init = () => {
     {
         let getDesc = (level) => `c_2=2^{${level}}`;
         let getInfo = (level) => `c_2=${getC2(level).toString(0)}`;
-        c2 = theory.createUpgrade(1, currency, new ExponentialCost(2, 4.5));
+        c2 = theory.createUpgrade(1, currency, new ExponentialCost(1000, Math.log2(10)));
         c2.getDescription = (_) => Utils.getMath(getDesc(c2.level));
         c2.getInfo = (amount) => Utils.getMathTo(getInfo(c2.level), getInfo(c2.level + amount));
     }
 
     {
-        let getDesc = (level) => `v_1=${getV1(level).toString(0)}`;
-        let getInfo = (level) => `v_1=${getV1(level).toString(0)}`;
-        v1 = theory.createUpgrade(2, currency, new ExponentialCost(100, Math.log2(3)));
-        v1.getDescription = (_) => Utils.getMath(getDesc(v1.level));
-        v1.getInfo = (amount) => Utils.getMathTo(getInfo(v1.level), getInfo(v1.level + amount));
+        let getDesc = (level) => `a_1=${getA1(level).toString(0)}`;
+        let getInfo = (level) => `a_1=${getA1(level).toString(0)}`;
+        a1 = theory.createUpgrade(2, currency, new ExponentialCost(4e4, Math.log2(40)));
+        a1.getDescription = (_) => Utils.getMath(getDesc(a1.level));
+        a1.getInfo = (amount) => Utils.getMathTo(getInfo(a1.level), getInfo(a1.level + amount));
     }
 
     {
-        let getDesc = (level) => `v_2=${getV2(level).toString(0)}`;
-        let getInfo = (level) => `v_2=${getV2(level).toString(0)}`;
-        v2 = theory.createUpgrade(3, currency, new ExponentialCost(250, Math.log2(5)));
-        v2.getDescription = (_) => Utils.getMath(getDesc(v2.level));
-        v2.getInfo = (amount) => Utils.getMathTo(getInfo(v2.level), getInfo(v2.level + amount));
+        let getDesc = (level) => `a_2={0.8}^{${level}}`;
+        let getInfo = (level) => `a_2=1/${getA2Reverse(level).toString(2)}`;
+        a2 = theory.createUpgrade(3, currency, new ExponentialCost(1e4, Math.log2(1e4)));
+        a2.getDescription = (_) => Utils.getMath(getDesc(a2.level));
+        a2.getInfo = (amount) => Utils.getMathTo(getInfo(a2.level), getInfo(a2.level + amount));
     }
 
     {
-        let getDesc = (level) => `v_3={1.5}^{${level}}`;
-        let getInfo = (level) => `v_3=${getV3(level).toString(2)}`;
-        v3 = theory.createUpgrade(4, currency, new ExponentialCost(1e8, Math.log2(13)));
-        v3.getDescription = (_) => Utils.getMath(getDesc(v3.level));
-        v3.getInfo = (amount) => Utils.getMathTo(getInfo(v3.level), getInfo(v3.level + amount));
+        let getDesc = (level) => `T_1=${getT1(level).toString(0)}`;
+        let getInfo = (level) => `T_1=${getT1(level).toString(0)}`;
+        T1 = theory.createUpgrade(4, currency, new ExponentialCost(1e5, Math.log2(40)));
+        T1.getDescription = (_) => Utils.getMath(getDesc(T1.level));
+        T1.getInfo = (amount) => Utils.getMathTo(getInfo(T1.level), getInfo(T1.level + amount));
     }
 
     {
-        let getDesc = (level) => `p=${getP(level).toString(0)}`;
-        let getInfo = (level) => `p=${getP(level).toString(0)}`;
-        p = theory.createUpgrade(5, currency, new ExponentialCost(1e6, Math.log2(1e1)));
-        p.getDescription = (_) => Utils.getMath(getDesc(p.level));
-        p.getInfo = (amount) => Utils.getMathTo(getInfo(p.level), getInfo(p.level + amount));
-    }
-
-    {
-        let suffix = `\\text{ K}`;
-        let getDesc = (level) => `T=5 \\times 2^{${level}} ${suffix}`;
-        let getInfo = (level) => `T=${getTemperature(level).toString(0)} ${suffix}`;
-        temperature = theory.createUpgrade(6, currency, new ExponentialCost(1e10, 15 * Math.log2(1.2)));
-        temperature.getDescription = (_) => Utils.getMath(getDesc(temperature.level));
-        temperature.getInfo = (amount) => Utils.getMathTo(getInfo(temperature.level), getInfo(temperature.level + amount));
-        temperature.isAvailable = false;
-    }
-
-    {
-        let getDesc = (level) => `a=${getA(level).toString(2)}`;
-        let getInfo = (level) => `a=${getA(level).toString(2)}`;
-        a = theory.createUpgrade(7, currency, new ExponentialCost(1e150, Math.log2(1e15)));
-        a.getDescription = (_) => Utils.getMath(getDesc(a.level));
-        a.getInfo = (amount) => Utils.getMathTo(getInfo(a.level), getInfo(a.level + amount));
-        a.isAvailable = false;
+        let getDesc = (level) => `S=${getS(level).toString(0)}`;
+        let getInfo = (level) => `S=${getS(level).toString(0)}`;
+        S = theory.createUpgrade(5, currency, new ExponentialCost(1e10, Math.log2(10)));
+        S.getDescription = (_) => Utils.getMath(getDesc(S.level));
+        S.getInfo = (amount) => Utils.getMathTo(getInfo(S.level), getInfo(S.level + amount));
     }
 
     // Permanent Upgrades
@@ -131,41 +111,6 @@ var init = () => {
     // Milestone Upgrades
     theory.setMilestoneCost(new LinearCost(15, 15));
 
-    {
-        msMean = theory.createMilestoneUpgrade(0, 5);
-        msMean.getDescription = (_) => {
-            if (msMean.level == 0) {
-                return `$\\text{Aggregate } \\mathbf{I} \\text{ using geometric mean}$`;
-            } else if (msMean.level == 1) {
-                return `$\\text{Aggregate } \\mathbf{I} \\text{ using arithmetic mean}$`;
-            } else if (msMean.level == 2) {
-                return `$\\text{Aggregate } \\mathbf{I} \\text{ using root mean square}$`;
-            } else if (msMean.level == 3) {
-                return `$\\text{Aggregate } \\mathbf{I} \\text{ using root mean cube}$`;
-            }
-            return Localization.getUpgradeAddTermDesc("a");
-        };
-        msMean.getInfo = (_) => {
-            if (msMean.level == 0) {
-                return `$\\text{Change g(I) to } \\sqrt[3]{\\mathbf{I}\\hat{x} \\cdot \\mathbf{I}\\hat{y} \\cdot \\mathbf{I}\\hat{z}}$`;
-            } else if (msMean.level == 1) {
-                return `$\\text{Change g(I) to } \\frac{\\mathbf{I}\\hat{x} + \\mathbf{I}\\hat{y} + \\mathbf{I}\\hat{z}}{3}$`;
-            } else if (msMean.level == 2) {
-                return `$\\text{Change g(I) to } \\sqrt{\\frac{(\\mathbf{I}\\hat{x})^2 + (\\mathbf{I}\\hat{y})^2 + (\\mathbf{I}\\hat{z})^2}{3}}$`;
-            } else if (msMean.level == 3) {
-                return `$\\text{Change g(I) to } \\sqrt[3]{\\frac{(\\mathbf{I}\\hat{x})^3 + (\\mathbf{I}\\hat{y})^3 + (\\mathbf{I}\\hat{z})^3}{3}}$`;
-            }
-            return Localization.getUpgradeAddTermInfo("a");
-        };
-    }
-
-    {
-        msTemperature = theory.createMilestoneUpgrade(1, 1);
-        msTemperature.getDescription = (_) => `${Localization.getUpgradeUnlockDesc("T")}; $\\uparrow C$`;
-        msTemperature.getInfo = (_) => `${Localization.getUpgradeUnlockInfo("T")} \\\\ ${Localization.getUpgradeMultCustomInfo("C", "5")}`;
-        msTemperature.boughtOrRefunded = (_) => updateAvailability();
-    }
-
     // Story Chapters
     theory.createStoryChapter(0, "The Beginnings", `You are an young engineer who is intrigued by the topic of acoustics.
 
@@ -175,79 +120,59 @@ While it may not seem impressive, it will allow you to dive deeper into the topi
 
 You put the machine into an isolated area to not disturb the neighbors and begin the personal research.`, () => c1.level > 0);
 
+    adot = BigNumber.ZERO;
+    a = BigNumber.from(50);
+    Tdot = BigNumber.ZERO;
+    T = BigNumber.ZERO;
+
     updateAvailability();
 };
 
 var updateAvailability = () => {
-    temperature.isAvailable = msTemperature.level > 0;
-    a.isAvailable = msMean.level == 5;
 };
 
 var getInternalState = () => JSON.stringify({
-    t: t.toBase64String(),
-    stage: stage,
-    v0: v[0].toBase64String(),
-    v1: v[1].toBase64String(),
-    v2: v[2].toBase64String()
+    a: a.toBase64String(),
+    T: T.toBase64String()
 });
 
 var setInternalState = (stateStr) => {
     if(!stateStr) return;
 
     let state = JSON.parse(stateStr);
-    t = BigNumber.fromBase64String(state.t) ?? t;
-    stage = state.stage ?? stage;
-    v[0] = BigNumber.fromBase64String(state.v0) ?? v[0];
-    v[1] = BigNumber.fromBase64String(state.v1) ?? v[1];
-    v[2] = BigNumber.fromBase64String(state.v2) ?? v[2];
+    a = if (state.a) BigNumber.fromBase64String(state.a) ?? a else a;
+    T = if (state.T) BigNumber.fromBase64String(state.T) ?? T else T;
 };
 
 var tick = (elapsedTime, multiplier) => {
     if (c1.level == 0) return;
 
-    let dt = BigNumber.from(elapsedTime * 100);
+    let dt = BigNumber.from(elapsedTime);
     let bonus = theory.publicationMultiplier * multiplier;
 
-    let c1Var = getC1(c1.level);
-    let c2Var = getC2(c2.level);
-    let v1Var = getV1(v1.level);
-    let v2Var = getV2(v2.level);
-    let v3Var = getV3(v3.level);
-    let pressureVar = getP(p.level);
-    let temperatureVar = getTemperature(temperature.level);
+    let vc1 = getC1(c1.level);
+    let vc2 = getC2(c2.level);
+    let va1 = getA1(a1.level);
+    let va2 = getA2Reverse(a2.level);
+    let vp1 = 1;
+    let vT1 = getT1(T1.level);
+    let vs = getS(S.level);
 
-    vdot[0] = v1Var * v2Var;
-    vdot[1] = v2Var * v3Var;
-    vdot[2] = v3Var * v1Var;
-    v[0] += dt * vdot[0];
-    v[1] += dt * vdot[1];
-    v[2] += dt * vdot[2];
-    I[0] = pressureVar * v[0];
-    I[1] = pressureVar * v[1];
-    I[2] = pressureVar * v[2];
+    c = 331.3196511181 + 0.6 * T;
+    let I = vp1 * vp1 / (a * c);
+    W = I * vs;
+    D = 10;
+    f = 1.84 * c / (Math.PI * D);
+    k = 2 * Math.PI * f / c;
 
-    let speedOfSound = BigNumber.from(331.3196511181);
-    if (msTemperature.level > 0) {
-        speedOfSound *= (1 + temperatureVar / 273.15).sqrt();
-    }
-    c = speedOfSound;
+    adot = va1 * (40 - a * va2);
+    a += dt * adot;
 
-    let aVar = -1;
-    if (msMean.level == 1) aVar = 0;
-    else if (msMean.level == 2) aVar = 1;
-    else if (msMean.level == 3) aVar = 2;
-    else if (msMean.level == 4) aVar = 3;
-    else if (msMean.level == 5) aVar = getA(a.level);
-    I_mean = aVar == 0 ? (I[0] * I[1] * I[2]).pow(1 / 3) : ((I[0].pow(aVar) + I[1].pow(aVar) + I[2].pow(aVar)) / 3).pow(1 / aVar);
+    Tdot = vT1 * vT1 * (T.sqrt() / 10).log2();
+    T += dt * Tdot;
 
-    let C = 2e-6;
-    if (msTemperature.level > 0) {
-        C *= 5;
-    }
-
-    rhodot = bonus * C * c1Var * c2Var * speedOfSound * I_mean;
+    rhodot = bonus * W * c * vc1 * vc2 * k;
     currency.value += dt * rhodot;
-    t += dt;
 
     theory.invalidatePrimaryEquation();
     theory.invalidateSecondaryEquation();
@@ -256,40 +181,22 @@ var tick = (elapsedTime, multiplier) => {
 };
 
 var postPublish = () => {
-    t = BigNumber.ZERO;
-    v[0] = v[1] = v[2] = BigNumber.ZERO;
+    a = BigNumber.from(50);
+    T = BigNumber.ZERO;
 };
 
 var getPrimaryEquation = () => {
     let result = ``;
     if (stage === 0) {
-        theory.primaryEquationHeight = 110;
-
-        result += `g(\\mathbf{I}) = `;
-        if (msMean.level == 0) {
-            result += `3/(\\frac{1}{\\mathbf{I}\\hat{x}} + \\frac{1}{\\mathbf{I}\\hat{y}} + \\frac{1}{\\mathbf{I}\\hat{z}})`;
-        } else if (msMean.level == 1) {
-            result += `\\sqrt[3]{\\mathbf{I}\\hat{x} \\cdot \\mathbf{I}\\hat{y} \\cdot \\mathbf{I}\\hat{z}}`;
-        } else if (msMean.level == 2) {
-            result += `\\frac{\\mathbf{I}\\hat{x} + \\mathbf{I}\\hat{y} + \\mathbf{I}\\hat{z}}{3}`;
-        } else if (msMean.level == 3) {
-            result += `\\sqrt{\\frac{(\\mathbf{I}\\hat{x})^2 + (\\mathbf{I}\\hat{y})^2 + (\\mathbf{I}\\hat{z})^2}{3}}`;
-        } else if (msMean.level == 4) {
-            result += `\\sqrt[3]{\\frac{(\\mathbf{I}\\hat{x})^3 + (\\mathbf{I}\\hat{y})^3 + (\\mathbf{I}\\hat{z})^3}{3}}`;
-        } else {
-            result += `\\sqrt[a]{(\\mathbf{I}\\hat{x})^a + (\\mathbf{I}\\hat{y})^a + (\\mathbf{I}\\hat{z})^a}`;
-        }
+        result += `W = I S`;
         result += `\\\\`;
-        result += `\\begin{matrix}`;
-        result += `\\dot{v_x} = v_1 v_2 ,& \\dot{v_y} = v_2 v_3 ,& \\dot{v_z} = v_3 v_1`;
-        result += `\\end{matrix}`;
-        result += `\\\\`;
-        result += `c = 331.32`;
-        if (msTemperature.level > 0) result += `\\sqrt{1 + T/273.15}`;
+        result += `I = \\frac{p^2}{a c}`;
     } else if (stage === 1) {
-        theory.primaryEquationHeight = 40;
-
-        result += `\\dot{\\rho} = C c_1 c_2 c g(\\mathbf{I})`; 
+        result += `\\dot{\\rho} = W c c_1 c_2 k`;
+        result += `\\\\`;
+        result += `\\dot{a} = a_1 (40 - \\frac{a}{a_2})`;
+        result += `\\\\`;
+        result += `\\dot{T} = T_1^2 \\log_2(\\frac{\\sqrt{T}}{10})`;
     }
     result += ``;
     return result;
@@ -298,9 +205,11 @@ var getPrimaryEquation = () => {
 var getSecondaryEquation = () => {
     let result = `\\begin{matrix}`;
     if (stage == 0) {
-        result += `\\mathbf{I} = p \\mathbf{v}`;
+        result += `f = \\frac{1.84 c}{\\pi D}`;
+        result += `\\\\`;
+        result += `k = 2 \\pi \\frac{f}{c}`;
     } else if (stage == 1) {
-        result += `g(\\mathbf{I}) = ${I_mean.toString(2)}`;
+        result += `c = 331.32 + 0.6 T`;
     }
     result += `\\end{matrix}`;
     return result;
@@ -309,13 +218,7 @@ var getSecondaryEquation = () => {
 var getTertiaryEquation = () => {
     let result = `\\begin{matrix}`;
     if (stage == 1) {
-        result += `C = `;
-        if (msTemperature.level > 0) {
-            result += `1\\text{e-}5`;
-        } else {
-            result += `2\\text{e-}6`;
-        }
-        result += `,& ${theory.latexSymbol} = \\max \\rho`;
+        result += `${theory.latexSymbol} = \\max \\rho`;
     }
     result += `\\end{matrix}`;
     return result;
@@ -324,30 +227,32 @@ var getTertiaryEquation = () => {
 var getQuaternaryEntries = () => {
     if (quaternaryEntries.length == 0) {
         if (stage == 0) {
-            quaternaryEntries.push(new QuaternaryEntry("t", null));
-            quaternaryEntries.push(new QuaternaryEntry("\\dot{v_x}", null));
-            quaternaryEntries.push(new QuaternaryEntry("\\dot{v_y}", null));
-            quaternaryEntries.push(new QuaternaryEntry("\\dot{v_z}", null));
+            quaternaryEntries.push(new QuaternaryEntry("f", null));
+            quaternaryEntries.push(new QuaternaryEntry("D", null));
+            quaternaryEntries.push(new QuaternaryEntry("k", null));
+            quaternaryEntries.push(new QuaternaryEntry("\\dot{a}", null));
+            quaternaryEntries.push(new QuaternaryEntry("\\dot{T}", null));
         } else if (stage == 1) {
             quaternaryEntries.push(new QuaternaryEntry("\\dot{\\rho}", null));
+            quaternaryEntries.push(new QuaternaryEntry("a", null));
+            quaternaryEntries.push(new QuaternaryEntry("T", null));
             quaternaryEntries.push(new QuaternaryEntry("c", null));
-            quaternaryEntries.push(new QuaternaryEntry("v_x", null));
-            quaternaryEntries.push(new QuaternaryEntry("v_y", null));
-            quaternaryEntries.push(new QuaternaryEntry("v_z", null));
+            quaternaryEntries.push(new QuaternaryEntry("W", null));
         }
     }
 
     if (stage == 0) {
-        quaternaryEntries[0].value = t.toString(2);
-        quaternaryEntries[1].value = vdot[0].toString(2);
-        quaternaryEntries[2].value = vdot[1].toString(2);
-        quaternaryEntries[3].value = vdot[2].toString(2);
+        quaternaryEntries[0].value = f.toString(2);
+        quaternaryEntries[1].value = D.toString(2);
+        quaternaryEntries[2].value = k.toString(2);
+        quaternaryEntries[3].value = adot.toString(2);
+        quaternaryEntries[4].value = Tdot.toString(2);
     } else if (stage == 1) {
         quaternaryEntries[0].value = rhodot.toString(2);
-        quaternaryEntries[1].value = c.toString(2);
-        quaternaryEntries[2].value = v[0].toString(2);
-        quaternaryEntries[3].value = v[1].toString(2);
-        quaternaryEntries[4].value = v[2].toString(2);
+        quaternaryEntries[1].value = a.toString(2);
+        quaternaryEntries[2].value = T.toString(2);
+        quaternaryEntries[3].value = c.toString(2);
+        quaternaryEntries[4].value = W.toString(2);
     }
 
     return quaternaryEntries;
@@ -375,14 +280,12 @@ var goToNextStage = () => {
     theory.invalidateQuaternaryValues();
 };
 
-var getC1 = (level) => Utils.getStepwisePowerSum(level, 2, 13, 0);
+var getC1 = (level) => Utils.getStepwisePowerSum(level, 2, 10, 0);
 var getC2 = (level) => BigNumber.TWO.pow(level);
-var getV1 = (level) => Utils.getStepwisePowerSum(level, 2, 6, 1);
-var getV2 = (level) => Utils.getStepwisePowerSum(level, 3, 8, 1);
-var getV3 = (level) => BigNumber.from(1.5).pow(level);
-var getP = (level) => Utils.getStepwisePowerSum(level, 2, 9, 1);
-var getTemperature = (level) => 5 * BigNumber.TWO.pow(level);
-var getA = (level) => 3 + 0.1 * level;
+var getA1 = (level) => Utils.getStepwisePowerSum(level, 2, 5, 0);
+var getA2Reverse = (level) => BigNumber.from(1 / 0.8).pow(level);
+var getT1 = (level) => Utils.getStepwisePowerSum(level, 2, 10, 0);
+var getS = (level) => Utils.getStepwisePowerSum(level, 100, 100, 1);
 
 const pubPower = 0.1;
 var getPublicationMultiplier = (tau) => tau.pow(pubPower);
