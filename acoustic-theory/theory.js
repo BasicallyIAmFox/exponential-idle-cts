@@ -253,6 +253,9 @@ var init = () => {
     theory.createBuyAllUpgrade(1, currency, 1e13);
     theory.createAutoBuyerUpgrade(2, currency, 1e20);
 
+    // Milestone Upgrades
+    theory.setMilestoneCost(new LinearCost(15, 25));
+
     {
         var aMilestoneConfirm = (levelDifference) => {
             if (aMilestoneConfirmed) {
@@ -267,8 +270,8 @@ var init = () => {
             }
         };
         a2ExpMs = theory.createMilestoneUpgrade(0, 2);
-        a2ExpMs.info = Localization.getUpgradeIncCustomExpInfo(`a_2`, `0.5`);
-        a2ExpMs.description = Localization.getUpgradeIncCustomExpDesc(`a_2`, `0.5`);
+        a2ExpMs.info = Localization.getUpgradeIncCustomExpInfo(`a_2`, `0.1`);
+        a2ExpMs.description = Localization.getUpgradeIncCustomExpDesc(`a_2`, `0.1`);
         a2ExpMs.bought = (boughtLevels) => aMilestoneConfirm(boughtLevels);
         a2ExpMs.refunded = (refundedLevels) => aMilestoneConfirm(-refundedLevels);
     }
@@ -311,9 +314,6 @@ var init = () => {
             updateAvailability()
         };
     }
-
-    // Milestone Upgrades
-    theory.setMilestoneCost(new LinearCost(15, 15));
 
     // Story Chapters
     theory.createStoryChapter(0, "The Beginnings", `You are an young engineer who is intrigued by the topic of acoustics.
@@ -406,8 +406,8 @@ var getPrimaryEquation = () => {
         result += `\\dot{\\rho} = c_1 c_2 k c^{4.5} W^{3.3}`;
         result += `\\\\`;
         result += `\\dot{a} = \\frac{a_1}{1000} (${DefaultAirPressureCap} - \\frac{a}{a_2`;
-        if (a2ExpMs.level === 1) result += `^{1.5}`;
-        if (a2ExpMs.level === 2) result += `^2`;
+        if (a2ExpMs.level === 1) result += `^{1.1}`;
+        if (a2ExpMs.level === 2) result += `^{1.2}`;
         result += `})`;
         result += `\\\\`;
         result += `\\dot{T} = T_1^2 \\log_2(2 + `;
