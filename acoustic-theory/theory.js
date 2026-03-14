@@ -234,7 +234,12 @@ var init = () => {
 
     {
         let getDesc = (level) => `a_2={0.8}^{${level}}`;
-        let getInfo = (level) => `a_2^{${a2ExpMs.level > 0 ? 1 + a2ExpMs.level / 2 : ``}}=1/${getA2Reverse(level).toString(2)}`;
+        let getInfo = (level) => {
+            let base = `a_2`;
+            if (a2ExpMs.level === 1) base += `^{1.1}`;
+            if (a2ExpMs.level === 2) base += `^{1.2}`;
+            return `${base}=1/${getA2Reverse(level).toString(2)}`;
+        };
         a2 = theory.createUpgrade(3, currency, new ExponentialCost(1e4, Math.log2(1e2)));
         a2.getDescription = (_) => Utils.getMath(getDesc(a2.level));
         a2.getInfo = (amount) => Utils.getMathTo(getInfo(a2.level), getInfo(a2.level + amount));
@@ -503,7 +508,7 @@ var goToNextStage = () => {
 var getC1 = (level) => Utils.getStepwisePowerSum(level, 2, 10, 0);
 var getC2 = (level) => BigNumber.TWO.pow(level);
 var getA1 = (level) => Utils.getStepwisePowerSum(level, 2, 12, 1);
-var getA2Reverse = (level) => BigNumber.from(1 / 0.8).pow(level * (1 + a2ExpMs.level / 2));
+var getA2Reverse = (level) => BigNumber.from(1 / 0.8).pow(level * (1 + a2ExpMs.level / 10));
 var getT1 = (level) => Utils.getStepwisePowerSum(level, 2, 10, 1);
 var getS = (level) => Utils.getStepwisePowerSum(level, 100, 100, 1);
 var getP = (level) => Utils.getStepwisePowerSum(level, 2, 10, 1);
