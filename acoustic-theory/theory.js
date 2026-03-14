@@ -59,6 +59,87 @@ const DefaultAirPressure = 50;
 const DefaultAirPressureCap = 40;
 const DefaultTemperature = 292.15;
 
+var aMilestoneConfirming = false, aMilestoneConfirmed = false, aMilestoneLevelDifference = 0, aPopup = ui.createPopup({
+  title: "a Milestone",
+  content: ui.createStackLayout({
+    children: [
+      ui.createLatexLabel({
+        text: "Buying or refunding this milestone will reset $a$.",
+        horizontalOptions: LayoutOptions.CENTER,
+        horizontalTextAlignment: TextAlignment.CENTER,
+        margin: new Thickness(0, 10, 0, 0),
+      }),
+      ui.createLatexLabel({
+        text: "Do you want to continue?",
+        horizontalOptions: LayoutOptions.CENTER,
+        horizontalTextAlignment: TextAlignment.CENTER,
+        margin: new Thickness(0, 15, 0, 15),
+      }),
+      ui.createStackLayout({
+        orientation: StackOrientation.HORIZONTAL,
+        children: [
+          ui.createButton({
+            horizontalOptions: LayoutOptions.FILL_AND_EXPAND,
+            text: "Yes",
+            onClicked: () => {
+              aMilestoneConfirmed = true;
+              if (theory.milestonesUnused > 0 || aMilestoneLevelDifference < 0) {
+                a2ExpMs.level += aMilestoneLevelDifference;
+              }
+              aPopup.hide();
+            },
+          }),
+          ui.createButton({
+            horizontalOptions: LayoutOptions.FILL_AND_EXPAND,
+            text: "No",
+            onClicked: () => aPopup.hide(),
+          }),
+        ],
+      }),
+    ],
+  }),
+});
+var TMilestoneConfirming = false, TMilestoneConfirmed = false, TMilestoneLevelDifference = 0, TPopup = ui.createPopup({
+  title: "T Milestone",
+  content: ui.createStackLayout({
+    children: [
+      ui.createLatexLabel({
+        text: "Buying or refunding this milestone will reset $T$.",
+        horizontalOptions: LayoutOptions.CENTER,
+        horizontalTextAlignment: TextAlignment.CENTER,
+        margin: new Thickness(0, 10, 0, 0),
+      }),
+      ui.createLatexLabel({
+        text: "Do you want to continue?",
+        horizontalOptions: LayoutOptions.CENTER,
+        horizontalTextAlignment: TextAlignment.CENTER,
+        margin: new Thickness(0, 15, 0, 15),
+      }),
+      ui.createStackLayout({
+        orientation: StackOrientation.HORIZONTAL,
+        children: [
+          ui.createButton({
+            horizontalOptions: LayoutOptions.FILL_AND_EXPAND,
+            text: "Yes",
+            onClicked: () => {
+              TMilestoneConfirmed = true;
+              if (theory.milestonesUnused > 0 || TMilestoneLevelDifference < 0) {
+                TRootMs.level += TMilestoneLevelDifference;
+              }
+              TPopup.hide();
+            },
+          }),
+          ui.createButton({
+            horizontalOptions: LayoutOptions.FILL_AND_EXPAND,
+            text: "No",
+            onClicked: () => TPopup.hide(),
+          }),
+        ],
+      }),
+    ],
+  }),
+});
+
 // taken from MF
 var numberFormat = (value, decimals, negExpFlag=false) => {
     if (value >= BigNumber.ZERO)
@@ -103,7 +184,7 @@ var numberFormat = (value, decimals, negExpFlag=false) => {
             return `-${mts}e${exp}`;
         }
     }
-}
+};
 
 var init = () => {
     currency = theory.createCurrency();
@@ -173,12 +254,38 @@ var init = () => {
     theory.createAutoBuyerUpgrade(2, currency, 1e20);
 
     {
+        var aMilestoneConfirm = (levelDifference) => {
+            if (aMilestoneConfirmed) {
+                a = BigNumber.from(DefaultAirPressure);
+                aMilestoneConfirmed = false;
+            } else if (!aMilestoneConfirming) {
+                aMilestoneConfirming = true;
+                aMilestoneLevelDifference = levelDifference;
+                a2ExpMs.level -= levelDifference;
+                aPopup.show();
+                aMilestoneConfirming = false;
+            }
+        };
         a2ExpMs = theory.createMilestoneUpgrade(0, 2);
         a2ExpMs.info = Localization.getUpgradeIncCustomExpInfo(`a_2`, `0.5`);
         a2ExpMs.description = Localization.getUpgradeIncCustomExpDesc(`a_2`, `0.5`);
+        a2ExpMs.bought = (boughtLevels) => aMilestoneConfirm(boughtLevels);
+        a2ExpMs.refunded = (refundedLevels) => aMilestoneConfirm(-refundedLevels);
     }
 
     {
+        var TMilestoneConfirm = (levelDifference) => {
+            if (TMilestoneConfirmed) {
+                T = BigNumber.from(DefaultTemperature);
+                TMilestoneConfirmed = false;
+            } else if (!TMilestoneConfirming) {
+                TMilestoneConfirming = true;
+                TMilestoneLevelDifference = levelDifference;
+                TRootMs.level -= levelDifference;
+                TPopup.show();
+                TMilestoneConfirming = false;
+            }
+        };
         TRootMs = theory.createMilestoneUpgrade(1, 2);
         TRootMs.getInfo = (level) => {
             if (level == 0) {
@@ -192,6 +299,8 @@ var init = () => {
             }
             return Utils.getMathTo(`\\sqrt[1.5]{T}`, `T`);
         };
+        TRootMs.bought = (boughtLevels) => TMilestoneConfirm(boughtLevels);
+        TRootMs.refunded = (refundedLevels) => TMilestoneConfirm(-refundedLevels);
     }
 
     {
