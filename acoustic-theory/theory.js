@@ -362,7 +362,7 @@ var tick = (elapsedTime, multiplier) => {
     let vc2 = getC2(c2.level);
     let va1 = getA1(a1.level);
     let va2 = getA2Reverse(a2.level);
-    let vp1 = 1;
+    let vp1 = pMs.level > 0 ? getP(p.level) : 1;
     let vT1 = getT1(T1.level);
     let vs = getS(S.level);
 
