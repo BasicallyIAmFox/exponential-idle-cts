@@ -179,7 +179,7 @@ var init = () => {
     }
 
     {
-        TRootMs = theory.createMilestoneUpgrade(0, 2);
+        TRootMs = theory.createMilestoneUpgrade(1, 2);
         TRootMs.getInfo = (level) => {
             if (level == 0) {
                 return Utils.getMathTo(`\\sqrt{T}`, `\\sqrt[1.5]{T}`);
@@ -195,7 +195,7 @@ var init = () => {
     }
 
     {
-        pMs = theory.createMilestoneUpgrade(0, 3);
+        pMs = theory.createMilestoneUpgrade(2, 1);
         pMs.info = Localization.getUpgradeUnlockInfo(`p`);
         pMs.description = Localization.getUpgradeUnlockDesc(`p`);
         pMs.boughtOrRefunded = (_) => {
