@@ -117,7 +117,7 @@ var init = () => {
     // Checkpoint Upgrades
     theory.setMilestoneCost(new CustomCost(total => {
         const costs = [25, 50, 75, 100, 120, 140, 160, 180, 200, 220];
-        return BigNumber.from(costs[Math.min(costs.length - 1, total)]);
+        return BigNumber.from(costs[Math.min(costs.length - 1, total)] * 2);
     }));
 
     {
