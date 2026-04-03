@@ -83,7 +83,7 @@ var init = () => {
     // e2
     {
         let getDesc = (level) => "\\epsilon_2={1.43}^{" + level + "}";
-        let getInfo = (level) => "\\epsilon_2=" + getE2(level).toString(0);
+        let getInfo = (level) => "\\epsilon_2=" + getE2(level).toString(2);
         e2 = theory.createUpgrade(3, currency, new ExponentialCost(25, Math.log2(1210000)));
         e2.getDescription = (amount) => Utils.getMath(getDesc(e2.level));
         e2.getInfo = (amount) => Utils.getMathTo(getInfo(e2.level), getInfo(e2.level + amount));
@@ -117,7 +117,7 @@ var init = () => {
     // Checkpoint Upgrades
     theory.setMilestoneCost(new CustomCost(total => {
         const costs = [25, 50, 75, 100, 120, 140, 160, 180, 200, 220];
-        return costs[Math.min(costs.length - 1, total)];
+        return BigNumber.from(costs[Math.min(costs.length - 1, total)]);
     }));
 
     {
