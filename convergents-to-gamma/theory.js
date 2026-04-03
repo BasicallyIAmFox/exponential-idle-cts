@@ -176,7 +176,7 @@ var updateAvailability = () => {
     e4.isAvailable = epsilonTermMs.level > 1;
 
     nBaseMs.isAvailable = epsilonTermMs.level === 2;
-    logBaseMs.isAvailable == nBaseMs.level === 2;
+    logBaseMs.isAvailable = nBaseMs.level === 2;
 };
 
 var getInternalState = () => JSON.stringify({
