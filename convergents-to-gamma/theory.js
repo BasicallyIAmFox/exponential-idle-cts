@@ -243,9 +243,9 @@ var getPrimaryEquation = () => {
     if (c1ExpMs.level === 2) result += `^{1.04}`;
     if (c1ExpMs.level === 3) result += `^{1.06}`;
     result += ` c_2 a^N \\\\ a = `;
-    if (nTermMs.level === 0) result += `1.1`;
-    if (nTermMs.level === 1) result += `1.11`;
-    if (nTermMs.level === 2) result += `1.12`;
+    if (nBaseMs.level === 0) result += `1.1`;
+    if (nBaseMs.level === 1) result += `1.11`;
+    if (nBaseMs.level === 2) result += `1.12`;
     result += `\\end{matrix}`
     return result;
 };
