@@ -93,7 +93,7 @@ var init = () => {
     {
         let getDesc = (level) => "\\epsilon_3={1.46}^{" + level + "}";
         let getInfo = (level) => "\\epsilon_3=" + getE3(level).toString(2);
-        e3 = theory.createUpgrade(4, currency, new ExponentialCost(1e20, 2 * Math.log2(18840000000)));
+        e3 = theory.createUpgrade(4, currency, new ExponentialCost(1e10, 2 * Math.log2(18840000000)));
         e3.getDescription = (amount) => Utils.getMath(getDesc(e3.level));
         e3.getInfo = (amount) => Utils.getMathTo(getInfo(e3.level), getInfo(e3.level + amount));
     }
@@ -102,7 +102,7 @@ var init = () => {
     {
         let getDesc = (level) => "\\epsilon_4={1.49}^{" + level + "}";
         let getInfo = (level) => "\\epsilon_4=" + getE4(level).toString(2);
-        e4 = theory.createUpgrade(5, currency, new ExponentialCost(1e40, 2 * Math.log2(3970000000000000000)));
+        e4 = theory.createUpgrade(5, currency, new ExponentialCost(1e20, 2 * Math.log2(3970000000000000000)));
         e4.getDescription = (amount) => Utils.getMath(getDesc(e4.level));
         e4.getInfo = (amount) => Utils.getMathTo(getInfo(e4.level), getInfo(e4.level + amount));
     }
@@ -123,13 +123,13 @@ var init = () => {
     {
         epsilonTermMs = theory.createMilestoneUpgrade(0, 2);
         epsilonTermMs.getDescription = (level) => {
-            if (level == 0) {
+            if (level == 1) {
                 return Localization.getUpgradeUnlockDesc(`\\epsilon_3`);
             }
             return Localization.getUpgradeUnlockDesc(`\\epsilon_4`);
         };
         epsilonTermMs.getInfo = (level) => {
-            if (level == 0) {
+            if (level == 1) {
                 return Localization.getUpgradeUnlockInfo(`\\epsilon_3`);
             }
             return Localization.getUpgradeUnlockInfo(`\\epsilon_4`);
