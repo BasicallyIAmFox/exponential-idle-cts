@@ -166,6 +166,9 @@ var init = () => {
         c1ExpMs = theory.createMilestoneUpgrade(3, 3);
         c1ExpMs.description = Localization.getUpgradeIncCustomExpDesc(`c_1`, `0.02`);
         c1ExpMs.info = Localization.getUpgradeIncCustomExpInfo(`c_1`, `0.02`);
+        c1ExpMs.boughtOrRefunded = (_) => {
+            theory.invalidatePrimaryEquation();
+        };
     }
 
     updateAvailability();
