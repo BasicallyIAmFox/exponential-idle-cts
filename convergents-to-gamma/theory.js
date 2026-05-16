@@ -123,33 +123,33 @@ var init = () => {
     {
         epsilonTermMs = theory.createMilestoneUpgrade(0, 2);
         epsilonTermMs.getDescription = (level) => {
-            if (level == 1) {
+            if (epsilonTermMs.level === 0) {
                 return Localization.getUpgradeUnlockDesc(`\\epsilon_3`);
             }
             return Localization.getUpgradeUnlockDesc(`\\epsilon_4`);
         };
         epsilonTermMs.getInfo = (level) => {
-            if (level == 1) {
+            if (epsilonTermMs.level === 0) {
                 return Localization.getUpgradeUnlockInfo(`\\epsilon_3`);
             }
             return Localization.getUpgradeUnlockInfo(`\\epsilon_4`);
         };
+        epsilonTermMs.canBeRefunded = (_) => nBaseMs.level === 0;
         epsilonTermMs.boughtOrRefunded = (_) => {
             theory.invalidateSecondaryEquation();
             updateAvailability();
         };
-        epsilonTermMs.isRefundable = (_) => nBaseMs.level === 0;
     }
 
     {
         nBaseMs = theory.createMilestoneUpgrade(1, 2);
         nBaseMs.description = `$\\uparrow a$ by 0.01`;
         nBaseMs.info = `Increases $a$ by 0.01`;
+        nBaseMs.canBeRefunded = (_) => logBaseMs.level === 0;
         nBaseMs.boughtOrRefunded = (_) => {
             theory.invalidatePrimaryEquation();
             updateAvailability();
         };
-        nBaseMs.isRefundable = (_) => logBaseMs.level === 0;
     }
 
     {
