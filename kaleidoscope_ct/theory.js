@@ -589,6 +589,9 @@ var tick = (elapsedTime, multiplier) => {
     let vn = getN(n.level);
     prime_count_n = BigNumber.from(prime_count(vn));
 
+    let alpha = Math.PI / vn;
+    let alpha_inverse = vn / Math.PI;
+    
     let f_x = (x) => {
         if (q_mode === Q_MODE_RHO)
             return 1 + x + x ** 2;
@@ -606,10 +609,9 @@ var tick = (elapsedTime, multiplier) => {
         else if (y < 0 && x < 0) theta = Math.atan2(-1, -x / y);
         else /* if (y > 0 && x < 0) */ theta = Math.atan2(1, x / y);
         theta = alpha - Math.abs(theta % (2 * alpha) - alpha);
-        return f_x(distance * theta / (r * alpha));
+        return f_x(distance * alpha_inverse * theta / r);
     };
 
-    let alpha = Math.PI / vn;
     {
         let q_speed = vq1 / 600;
         let q_spiral = getBetaValue();
