@@ -733,6 +733,7 @@ var updateQuaternaryEntries = () => {
     quaternaryEntries.push(new QuaternaryEntry(`\\pi(n)`, prime_count_n.toString(2)));
 };
 var getQuaternaryEntries = () => {
+    updateQuaternaryEntries();
     return [];
 };
 
