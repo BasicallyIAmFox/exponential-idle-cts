@@ -604,7 +604,7 @@ var tick = (elapsedTime, multiplier) => {
         if (y > 0 && x > 0) theta = Math.atan2(1, x / y);
         else if (y < 0 && x > 0) theta = Math.atan2(y / x, 1);
         else if (y < 0 && x < 0) theta = Math.atan2(-1, -x / y);
-        else /* if (y > 0 && x < 0) */ theta = Math.atan2(1, -x / y);
+        else /* if (y > 0 && x < 0) */ theta = Math.atan2(1, x / y);
         theta = alpha - Math.abs(theta % (2 * alpha) - alpha);
         return f_x(distance * theta / (r * alpha));
     };
