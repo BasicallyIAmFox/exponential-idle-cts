@@ -600,7 +600,11 @@ var tick = (elapsedTime, multiplier) => {
     let g_x = (x, y) => {
         if (x == 0.0 && y == 0.0) return f_x(0.0);
         let distance = (x ** 2 + y ** 2) ** 0.5;
-        let theta = Math.atan2(1, x / y);
+        let theta;
+        if (y > 0 && x > 0) theta = Math.atan2(1, x / y);
+        else if (y < 0 && x > 0) theta = Math.atan2(y / x, 1);
+        else if (y < 0 && x < 0) theta = Math.atan2(-1, -x / y);
+        else /* if (y > 0 && x < 0) */ theta = Math.atan2(1, -x / y);
         theta = alpha - Math.abs(theta % (2 * alpha) - alpha);
         return f_x(distance * theta / (r * alpha));
     };
