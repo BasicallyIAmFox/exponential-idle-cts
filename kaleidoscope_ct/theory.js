@@ -647,13 +647,6 @@ var tick = (elapsedTime, multiplier) => {
         let scale_y = 1 - BigNumber.E.pow(-dt * q_speed * dq_y.abs());
         q_x += Math.sign(dq_x) * scale_x * (target_x - q_x).abs();
         q_y += Math.sign(dq_y) * scale_y * (target_y - q_y).abs();
-
-        // Clamp within bounds.
-        /*let q_magnitude = (q_x ** 2 + q_y ** 2) ** 0.5;
-        if (q_magnitude > r) {
-            q_x *= r / q_magnitude;
-            q_y *= r / q_magnitude;
-        }*/
     }
 
     g_q = BigNumber.from(g_x(q_x, q_y)).max(BigNumber.ZERO);
@@ -785,8 +778,6 @@ var getEquationOverlay = () => {
     let quaternaryChildren = [];
     updateQuaternaryEntries();
     for (let i = 0; i < quaternaryEntries.length; i++) {
-        var entry = quaternaryEntries[i];
-
         let name = ui.createLatexLabel({
             row: 0, column: 0,
             horizontalOptions: LayoutOptions.END,
@@ -855,8 +846,8 @@ var getQ1 = (level) => Utils.getStepwisePowerSum(level, 2, 5, 3);
 var getR1 = (level) => BigNumber.from(1.4).pow(level);
 var getN = (level) => 3 + level;
 
-var getPublicationMultiplier = (tau) => tau.pow(0.23);
-var getPublicationMultiplierFormula = (symbol) => `(${symbol})^{0.23}`;
+var getPublicationMultiplier = (tau) => tau.pow(0.575) / 100;
+var getPublicationMultiplierFormula = (symbol) => `\\frac{${symbol}^{0.575}}{100}`;
 var getCurrencyFromTau = (tau) => [tau.pow(1 / 0.4), currency.symbol];
 var getTau = () => currency.value.pow(0.4);
 var get3DGraphPoint = () => graph3DSystem.state;
