@@ -4,7 +4,7 @@ import { BigNumber } from "./api/BigNumber";
 import { theory, QuaternaryEntry } from "./api/Theory";
 import { Utils } from "./api/Utils";
 
-var id = "fractal_patterns";
+var id = "fractal_patterns_ms7";
 var name = "Fractal Patterns (Mid-Season 7)";
 var description =
   "A theory that takes advantage of the growth of the 3 fractal patterns:\n Toothpick Sequence (Tₙ),\n Ulam-Warburton cellular automaton (Uₙ),\n Sierpiński triangle (Sₙ).\n\n Big thanks to Gen (gen1code) and NGZ (ngz001) for all the help and suggestions with the LaTeX.\n\nYou also have 30 minute limit to go as far as possible starting from 1e700 ρ! Good luck!";
