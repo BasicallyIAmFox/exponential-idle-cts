@@ -186,13 +186,14 @@ var tick = (elapsedTime, multiplier) => {
     let vc3 = c3Term.level > 0 ? getC3(c3.level).pow(getC3Exp(c3Exp.level)) : BigNumber.ONE;
     let dq = (vc1 / vc2) * q * (vc3 - q / vc2) * dt;
 
-    if (timer < timeLimit) {
+    if (timerStarted && timer < timeLimit) {
         q = q + dq.max(BigNumber.ZERO);
         q = q.min(vc2 * vc3);
         currency.value += bonus * vq1 * vq2 * q * dt;
         cumul_rho += bonus * vq1 * vq2 * q * dt;
     }
 
+    theory.invalidateSecondaryEquation();
     theory.invalidateTertiaryEquation();
 
     if (saveScum) {
