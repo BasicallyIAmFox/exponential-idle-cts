@@ -374,6 +374,10 @@ var updateAvailability = () => {
 };
 
 var tick = (elapsedTime, multiplier) => {
+  if (game.isCalculatingOfflineProgress) {
+    return;
+  }
+
   let dt = BigNumber.from(elapsedTime * multiplier);
   let bonus = theory.publicationMultiplier;
   adBoost = BigNumber.from(multiplier);

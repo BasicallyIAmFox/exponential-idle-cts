@@ -12,7 +12,9 @@ var currency;
 
 var kappa1, kappa2, kappa3;
 
-var q1_1 = BigNumber.ONE, q1_2 = BigNumber.ONE, q1_3 = BigNumber.ONE;
+var q = BigNumber.ZERO;
+var q1_1 = BigNumber.ZERO, q1_2 = BigNumber.ONE, q1_3 = BigNumber.ONE;
+var q2_1 = BigNumber.ONE;
 
 var init = () => {
     currency = theory.createCurrency();
@@ -46,13 +48,13 @@ var init = () => {
     // Permanent Upgrades
     theory.createBuyAllUpgrade(1, currency, 1e13);
     theory.createAutoBuyerUpgrade(2, currency, 1e20);
-
 };
 
 var getInternalState = () => JSON.stringify({
     q1_1: q1_1.toBase64String(),
     q1_2: q1_2.toBase64String(),
     q1_3: q1_3.toBase64String(),
+    q2_1: q2_1.toBase64String(),
 });
 
 var setInternalState = (stateStr) => {
@@ -62,6 +64,7 @@ var setInternalState = (stateStr) => {
     q1_1 = BigNumber.fromBase64String(state.q1_1);
     q1_2 = BigNumber.fromBase64String(state.q1_2);
     q1_3 = BigNumber.fromBase64String(state.q1_3);
+    q2_1 = BigNumber.fromBase64String(state.q2_1);
 };
 
 var tick = (elapsedTime, multiplier) => {
@@ -80,19 +83,34 @@ var tick = (elapsedTime, multiplier) => {
         return (value + dt * qdot).min(cap * capMulti);
     };
 
+    q2_1 = getNewQ(1, 2, q2_1, getKappa1(kappa1.level), 1).max(BigNumber.ONE);
+
     q1_3 = getNewQ(3, 1, q1_3, getKappa3(kappa3.level), 1).max(BigNumber.ONE);
     q1_2 = getNewQ(2, 1, q1_2, getKappa2(kappa2.level), q1_3).max(BigNumber.ONE);
-    q1_1 = getNewQ(1, 1, q1_1, getKappa1(kappa1.level), q1_2).max(BigNumber.ONE);
+    q1_1 = getNewQ(1, 1, q1_1, getKappa1(kappa1.level), q1_2).max(BigNumber.ZERO);
 
-    currency.value += dt * bonus * q1_1.pow(1 / 3) * q1_2.pow(1 / 2) * q1_3;
+    q += dt * q1_1;
+    currency.value += dt * bonus * q;
+
     theory.invalidateSecondaryEquation();
+};
+
+var getQnLatex = (n, k, m, up = ``) => {
+    return `{{}^{${k}}_{${m}} q_{${n}}^{${up}}}`;
 };
 
 var getPrimaryEquation = () => {
     theory.primaryEquationHeight = 60;
 
-    let result = ``;
-    result += `\\dot{{}^k_m q_n} = \\frac{\\sqrt[k]{{}^k_m q_n}}{\\kappa_k} ({{}^{k + 1}_m q_n} - \\frac{{{}^k_m q_n}}{\\kappa_k})^{m}`;
+    let thisQn = getQnLatex(`n`, `k`, `m`);
+    let thisQnCap = getQnLatex(`n`, `k`, `m`, `\\text{cap}`);
+    let nextQn = getQnLatex(`n`, `k + 1`, `m`);
+
+    let result = `\\begin{array}{c}`;
+    result += `\\ddot{\\rho} = ${getQnLatex(1, 1, 1)} \\\\`;
+    result += `\\dot{${thisQn}} = \\frac{\\sqrt[k]{${thisQn}}{\\kappa_k} (${thisQnCap} - \\frac{${thisQn}}{\\kappa_k})^{m} \\\\`;
+    result += `${thisQnCap} = ${nextQn} \\\\`;
+    result += `\\end{array}`;
     return result;
 };
 
@@ -100,9 +118,9 @@ var getSecondaryEquation = () => {
     theory.secondaryEquationHeight = 80;
 
     return `\\begin{matrix}
-{{}^1_1 q_n} = ${q1_1.toString(2)} \\\\
-{{}^2_1 q_n} = ${q1_2.toString(2)} \\\\
-{{}^3_1 q_n} = ${q1_3.toString(2)} \\\\
+{${getQnLatex(1, 1, 1)}} = ${q1_1.toString(2)} \\\\
+{${getQnLatex(1, 2, 1)}} = ${q1_2.toString(2)} \\\\
+{${getQnLatex(1, 3, 1)}} = ${q1_3.toString(2)} \\\\
 \\end{matrix}`;
 };
 
