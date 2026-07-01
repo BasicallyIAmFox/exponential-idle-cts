@@ -10,6 +10,7 @@ var description = "An implementation of the 'Logistic Function' theory from the 
 var authors = "Gilles-Philippe Paillé";
 var version = 1;
 
+const timeLimit = 60 * 30; // 30 minutes
 var timerStarted = false;
 var timer = 0;
 var saveScum = false;
