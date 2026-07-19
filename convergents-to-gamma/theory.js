@@ -218,7 +218,7 @@ var tick = (elapsedTime, multiplier) => {
     let dt = BigNumber.from(elapsedTime * multiplier);
     let bonus = theory.publicationMultiplier;
 
-    let vc1 = getC1(c1.level);
+    let vc1 = getC1(c1.level) ** (1 + 0.02 * c1ExpMs.level);
     let vc2 = getC2(c2.level);
     let ve1 = getE1(e1.level);
     let ve2 = getE2(e2.level);
