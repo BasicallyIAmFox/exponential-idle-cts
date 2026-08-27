@@ -267,7 +267,7 @@ var getSecondaryEquation = () => {
     return `\\begin{matrix}
 \\log_{b}^{(n)}(z) = \\left\\{ \\begin{array}{cl} z & : \\ n = 0 \\\\ \\log_{b}(\\log_{b}^{(n-1)}(z)) & : \\ n > 0 \\end{array} \\right. \\\\
 N = \\min{\\{ n \\in \\mathbb{N} \\ | \\ | \\log_{b}^{(n)}(\\sqrt{-1}) - x_0 | \\leq (${epsilon})^{-1} \\}} \\\\
-b = ${base} ,\\ x_0 = b \\ln{x_0} \\equiv ${point}
+b = ${base} ,\\ x_0 = \\log_{b}{x_0} \\equiv ${point}
 \\end{matrix}`;
 };
 
