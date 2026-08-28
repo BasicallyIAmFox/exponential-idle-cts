@@ -79,7 +79,7 @@ var init = () => {
     {
         let getDesc = (level) => "\\epsilon_1=" + getE1(level).toString(0);
         let getInfo = (level) => "\\epsilon_1=" + getE1(level).toString(0);
-        e1 = theory.createUpgrade(2, currency, new ExponentialCost(10, Math.log2(50)));
+        e1 = theory.createUpgrade(2, currency, new ExponentialCost(10, Math.log2(5)));
         e1.getDescription = (amount) => Utils.getMath(getDesc(e1.level));
         e1.getInfo = (amount) => Utils.getMathTo(getInfo(e1.level), getInfo(e1.level + amount));
     }
