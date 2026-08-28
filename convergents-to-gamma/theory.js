@@ -281,8 +281,8 @@ var getE4 = (level) => BigNumber.from(4).pow(level);
 
 var getCurrencyFromTau = (tau) => [tau.sqrt(), currency.symbol];
 var getTau = () => currency.value.pow(2);
-var getPublicationMultiplier = (tau) => tau.pow(0.39) / 1200;
-var getPublicationMultiplierFormula = (symbol) => `\\frac{{${symbol}}^{0.39}}{1200}`;
+var getPublicationMultiplier = (tau) => tau.pow(0.39) / BigNumber.E.pow(7);
+var getPublicationMultiplierFormula = (symbol) => `\\frac{{${symbol}}^{0.39}}{e^{7}}`;
 var get2DGraphValue = () => currency.value.sign * (BigNumber.ONE + currency.value.abs()).log10().toNumber();
 
 init();
