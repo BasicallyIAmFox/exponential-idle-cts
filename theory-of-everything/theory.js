@@ -128,11 +128,15 @@ var init = () => {
     
     {
         let getDesc = (level) => {
+            if (level === 0) return `\\text{Add } \\gamma_1 \\text{ factor to } \\dot{\\rho} ; \\text{ } \\gamma_1 = 2^{1}`;
+
+            return `\\gamma_1 = 2^{${level}}`;
+        };
+        let getInfo = (level) => {
             if (level === 0) return `\\text{Add } \\gamma_1 \\text{ factor to } \\dot{\\rho} ; \\text{ } \\gamma_1 = 2`;
 
-            return `\\gamma_1 = 2^{${level}} \\to \\gamma_1 = 2^{${level + 1}}`;
+            return `\\gamma_1 = ${getGammaUpgGammaMult(level)}`;
         };
-        let getInfo = (level) => `\\gamma_1 = ${getGammaUpgGammaMult(level)}`;
         gammaup_gammaMult = theory.createUpgrade(10, gammaCurrency, new ExponentialCost(1, Math.log2(1.8)));
         gammaup_gammaMult.getDescription = (_) => Utils.getMath(getDesc(gammaup_gammaMult.level));
         gammaup_gammaMult.getInfo = (amount) => Utils.getMathTo(getInfo(gammaup_gammaMult.level), getInfo(gammaup_gammaMult.level + amount));
