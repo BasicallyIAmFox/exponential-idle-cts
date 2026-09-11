@@ -316,7 +316,7 @@ var getSecondaryEquation = () => {
     let result = `\\begin{array}{}`;
 
     if (achievement1.isUnlocked) {
-        result += `(\\forall x)(x > 1 \\Rightarrow \\dot{x} = (x^{1.25} + \\dot{x})^{0.8}) \\\\`;
+        result += `(\\forall x)(x > 1 \\Rightarrow \\dot{x} = (x^{1.25} + \\dot{x})^{0.8} - x) \\\\`;
     }
     result += `(\\forall q)(\\dot{q} = \\dot{q} - q / 100)`;
 
@@ -620,7 +620,7 @@ var getDQ3 = (level = dq3.level) => Utils.getStepwisePowerSum(level, 2, 10, 0) /
 var getDQ4 = (level = dq4.level) => Utils.getStepwisePowerSum(level, 2, 10, 0) / 10;
 
 var getGammaPending = (rho = maxRho) => {
-    let result = rho >= 1000 ? (rho / 1000).pow(0.1) : BigNumber.ZERO;
+    let result = rho >= 1000 ? (rho / 1000).pow(0.2) : BigNumber.ZERO;
 
     if (achievement3.isUnlocked) {
         result *= 2;
