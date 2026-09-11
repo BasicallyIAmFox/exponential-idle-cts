@@ -87,28 +87,28 @@ var init = () => {
 
     {
         let getDesc = (level) => "\\dot{q}_1=" + getDQ1(level).toString(1) + "\\times q_2 - \\frac{1}{100} q_1";
-        let getInfo = (level) => "\\dot{q}_1=" + (getDQ1(level) * q2 - (1 / 100) * q1).toString(4);
+        let getInfo = (level) => "\\dot{q}_1=" + productionSoftcap(getDQ1(level) * q2 - (1 / 100) * q1).toString(4);
         dq1 = theory.createUpgrade(0, currency, new FirstFreeCost(new ExponentialCost(0.1, Math.log2(2e2) / 2)));
         dq1.getDescription = (_) => Utils.getMath(getDesc(dq1.level));
         dq1.getInfo = (amount) => Utils.getMathTo(getInfo(dq1.level), getInfo(dq1.level + amount));
     }
     {
         let getDesc = (level) => "\\dot{q}_2=" + getDQ2(level).toString(1) + "\\times q_3 - \\frac{1}{100} q_2";
-        let getInfo = (level) => "\\dot{q}_2=" + (getDQ2(level) * q3 - (1 / 100) * q2).toString(4);
+        let getInfo = (level) => "\\dot{q}_2=" + productionSoftcap(getDQ2(level) * q3 - (1 / 100) * q2).toString(4);
         dq2 = theory.createUpgrade(1, currency, new FirstFreeCost(new ExponentialCost(1, Math.log2(2e4) / 2)));
         dq2.getDescription = (_) => Utils.getMath(getDesc(dq2.level));
         dq2.getInfo = (amount) => Utils.getMathTo(getInfo(dq2.level), getInfo(dq2.level + amount));
     }
     {
         let getDesc = (level) => "\\dot{q}_3=" + getDQ3(level).toString(1) + "\\times q_4 - \\frac{1}{100} q_3";
-        let getInfo = (level) => "\\dot{q}_3=" + (getDQ3(level) * q4 - (1 / 100) * q3).toString(4);
+        let getInfo = (level) => "\\dot{q}_3=" + productionSoftcap(getDQ3(level) * q4 - (1 / 100) * q3).toString(4);
         dq3 = theory.createUpgrade(2, currency, new ExponentialCost(10000, Math.log2(2e6) / 2));
         dq3.getDescription = (_) => Utils.getMath(getDesc(dq3.level));
         dq3.getInfo = (amount) => Utils.getMathTo(getInfo(dq3.level), getInfo(dq3.level + amount));
     }
     {
         let getDesc = (level) => "\\dot{q}_4=" + getDQ4(level).toString(1) + " - \\frac{1}{100} q_4";
-        let getInfo = (level) => "\\dot{q}_4=" + (getDQ4(level) - (1 / 100) * q4).toString(4);
+        let getInfo = (level) => "\\dot{q}_4=" + productionSoftcap(getDQ4(level) - (1 / 100) * q4).toString(4);
         dq4 = theory.createUpgrade(3, currency, new ExponentialCost(8e20, Math.log2(2e8) / 2));
         dq4.getDescription = (_) => Utils.getMath(getDesc(dq4.level));
         dq4.getInfo = (amount) => Utils.getMathTo(getInfo(dq4.level), getInfo(dq4.level + amount));
