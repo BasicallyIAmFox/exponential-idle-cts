@@ -1,31 +1,3 @@
-import { FreeCost, FirstFreeCost, ConstantCost, LinearCost, ExponentialCost, StepwiseCost, CompositeCost, CustomCost } from "./api/Costs";
-import { Localization } from "./api/Localization";
-import { BigNumber } from "./api/BigNumber";
-import { theory } from "./api/Theory";
-import { Vector3, Utils } from "./api/Utils";
-
-import { ui } from "../api/ui/UI";
-import { Aspect } from "../api/ui/properties/Aspect";
-import { ClearButtonVisibility } from "../api/ui/properties/ClearButtonVisibility";
-import { Color } from "../api/ui/properties/Color";
-import { CornerRadius } from "../api/ui/properties/CornerRadius";
-import { Easing } from "../api/ui/properties/Easing";
-import { FontAttributes } from "../api/ui/properties/FontAttributes";
-import { FontFamily } from "../api/ui/properties/FontFamily";
-import { ImageSource } from "../api/ui/properties/ImageSource";
-import { Keyboard } from "../api/ui/properties/Keyboard";
-import { LayoutOptions } from "../api/ui/properties/LayoutOptions";
-import { LineBreakMode } from "../api/ui/properties/LineBreakMode";
-import { ReturnType } from "../api/ui/properties/ReturnType";
-import { ScrollBarVisibility } from "../api/ui/properties/ScrollBarVisibility";
-import { ScrollOrientation } from "../api/ui/properties/ScrollOrientation";
-import { StackOrientation } from "../api/ui/properties/StackOrientation";
-import { TextAlignment } from "../api/ui/properties/TextAlignment";
-import { TextDecorations } from "../api/ui/properties/TextDecorations";
-import { Thickness } from "../api/ui/properties/Thickness";
-import { TouchEvent } from "../api/ui/properties/TouchEvent";
-import { TouchType } from "../api/ui/properties/TouchType";
-
 var id = "theory_of_everything";
 var getName = (_) => {
     return `Theory of Everything`;
@@ -36,10 +8,166 @@ var getDescription = (_) => {
 var authors = "BasicallyIAmFox";
 var version = 0;
 
+var achievement1, achievement2, achievement3;
+
+var stringTickspeed = (value) => `\\text{Tickspeed} : \\text{${value}} \\text{ / sec}`;
+var tickspeed;
+var tickspeedConsts = [
+    11 / (2 ** 10),
+    10 / (2 ** 9),
+    9 / (2 ** 8),
+    8 / (2 ** 7),
+    7 / (2 ** 6),
+    6 / (2 ** 5),
+    5 / (2 ** 4),
+    4 / (2 ** 3),
+    3 / (2 ** 2),
+    2 / (2 ** 1),
+    1 / (2 ** 0),
+];
+
 var currency;
+var maxRho = BigNumber.ZERO;
+var q1 = BigNumber.ZERO, q2 = BigNumber.ZERO, q3 = BigNumber.ONE, q4 = BigNumber.ONE;
+var dq1, dq2, dq3, dq4;
+
+var gammaCurrency;
+var gammaCurrencyTotal;
+var gammaResets = 0;
+var gammaup_gammaMult;
+
+var numberFormat = (value, decimals, negExpFlag=false) => {
+    if (value >= BigNumber.ZERO)
+    {
+        if (value >= BigNumber.from(0.1) || value == BigNumber.ZERO) 
+        {
+            if (value > BigNumber.ZERO && value < BigNumber.ONE && decimals < 3)
+            {
+                return value.toString(3);
+            }
+            return value.toString(decimals);
+        }
+        else
+        {
+            let exp = Math.floor((value*BigNumber.from(1+1e-5)).log10().toNumber());
+            let mts = (value * BigNumber.TEN.pow(-exp)).toString(decimals);
+            if (mts.startsWith('10')) { // Edge case when mantissa rounds up to 10
+                mts = (value * BigNumber.TEN.pow(-exp) / 10).toString(decimals)
+                exp++;
+            }
+            if (exp > 0 || !negExpFlag)
+            {
+                return `${mts}e${exp}`;
+            }
+            else
+            {
+                return `${mts}e$\\,-$${-exp}`;
+            }
+        }
+    }
+    else
+    {
+        value = -value;
+        if (value >= BigNumber.from(0.1) || value == BigNumber.ZERO) 
+        {
+            return (-value).toString(decimals);
+        }
+        else
+        {
+            let exp = Math.floor((value*BigNumber.from(1+1e-5)).log10().toNumber());
+            let mts = (value * BigNumber.TEN.pow(-exp)).toString(decimals);
+            return `-${mts}e${exp}`;
+        }
+    }
+};
 
 var init = () => {
-    currency = theory.createCurrency();
+    currency = theory.createCurrency(`ρ`, `\\rho`);
+    gammaCurrency = theory.createCurrency(`γ`, `\\gamma`);
+
+    {
+        let getDesc = (level) => "\\dot{q}_1=" + getDQ1(level).toString(1) + "\\times q_2 - \\frac{1}{100} q_1";
+        let getInfo = (level) => "\\dot{q}_1=" + (getDQ1(level) * q2 - (1 / 100) * q1).toString(4);
+        dq1 = theory.createUpgrade(0, currency, new FirstFreeCost(new ExponentialCost(0.1, Math.log2(2e2) / 2)));
+        dq1.getDescription = (_) => Utils.getMath(getDesc(dq1.level));
+        dq1.getInfo = (amount) => Utils.getMathTo(getInfo(dq1.level), getInfo(dq1.level + amount));
+    }
+    {
+        let getDesc = (level) => "\\dot{q}_2=" + getDQ2(level).toString(1) + "\\times q_3 - \\frac{1}{100} q_2";
+        let getInfo = (level) => "\\dot{q}_2=" + (getDQ2(level) * q3 - (1 / 100) * q2).toString(4);
+        dq2 = theory.createUpgrade(1, currency, new FirstFreeCost(new ExponentialCost(1, Math.log2(2e4) / 2)));
+        dq2.getDescription = (_) => Utils.getMath(getDesc(dq2.level));
+        dq2.getInfo = (amount) => Utils.getMathTo(getInfo(dq2.level), getInfo(dq2.level + amount));
+    }
+    {
+        let getDesc = (level) => "\\dot{q}_3=" + getDQ3(level).toString(1) + "\\times q_4 - \\frac{1}{100} q_3";
+        let getInfo = (level) => "\\dot{q}_3=" + (getDQ3(level) * q4 - (1 / 100) * q3).toString(4);
+        dq3 = theory.createUpgrade(2, currency, new ExponentialCost(10000, Math.log2(2e6) / 2));
+        dq3.getDescription = (_) => Utils.getMath(getDesc(dq3.level));
+        dq3.getInfo = (amount) => Utils.getMathTo(getInfo(dq3.level), getInfo(dq3.level + amount));
+    }
+    {
+        let getDesc = (level) => "\\dot{q}_4=" + getDQ4(level).toString(1) + " - \\frac{1}{100} q_4";
+        let getInfo = (level) => "\\dot{q}_4=" + (getDQ4(level) - (1 / 100) * q4).toString(4);
+        dq4 = theory.createUpgrade(3, currency, new ExponentialCost(8e20, Math.log2(2e8) / 2));
+        dq4.getDescription = (_) => Utils.getMath(getDesc(dq4.level));
+        dq4.getInfo = (amount) => Utils.getMathTo(getInfo(dq4.level), getInfo(dq4.level + amount));
+    }
+    {
+        let getDesc = (level) => "\\dot{t}=" + (11 - level) + "/ 2^{" + (10 - level) + "}";
+        let getInfo = (level) => "\\dot{t}=" + getTickspeed(level).toString(4);
+        tickspeed = theory.createPermanentUpgrade(3, currency, new ExponentialCost(2, Math.log2(80)));
+        tickspeed.getDescription = (_) => Utils.getMath(getDesc(tickspeed.level));
+        tickspeed.getInfo = (amount) => Utils.getMathTo(getInfo(tickspeed.level), getInfo(tickspeed.level + amount));
+        tickspeed.maxLevel = tickspeedConsts.length - 1;
+    }
+    
+    {
+        let getDesc = (level) => {
+            if (level === 0) return `\\text{Add } \\gamma_1 \\text{ factor to } \\dot{\\rho} ; \\text{ } \\gamma_1 = (1 + \\ln(1 + \\gamma_{t}))^{\\log_{10}(256 + \\gamma_{t})}`;
+
+            //return `\\gamma_1 = (1 + \\ln(1 + \\gamma_{t}))^{0.5 \\times (\\text{Level} - 1) + \\log_{10}(256 + \\gamma_{t})}`;
+            return `\\gamma_1 = (1 + \\ln(1 + \\gamma_{t}))^{0.5 \\times ${level - 1} + \\log_{10}(256 + \\gamma_{t})} = ${getGammaUpgGammaMult(level)} \\\\ \\to \\gamma_1 = (1 + \\ln(1 + \\gamma_{t}))^{0.5 \\times ${level} + \\log_{10}(256 + \\gamma_{t})} = ${getGammaUpgGammaMult(level + 1)}`;
+        };
+        let getInfo = (level) => ``;
+        gammaup_gammaMult = theory.createUpgrade(10, gammaCurrency, new ExponentialCost(1, Math.log2(1.8)));
+        gammaup_gammaMult.getDescription = (_) => Utils.getMath(getDesc(gammaup_gammaMult.level));
+        gammaup_gammaMult.getInfo = (amount) => Utils.getMathTo(getInfo(gammaup_gammaMult.level), getInfo(gammaup_gammaMult.level + amount));
+        gammaup_gammaMult.isAvailable = false;
+    }
+
+    let achievement_category1 = theory.createAchievementCategory(0, "Progression");
+    {
+        achievement1 = theory.createAchievement(0, achievement_category1, "Achievements are the way to go", `Reach 1ρ, 1 q₁, or 1 q₂.\n\nReward: all production above 1 is powered by 0.8.`, () => currency.value >= 1 || q1 >= 1 || q2 >= 1);
+        achievement2 = theory.createAchievement(1, achievement_category1, "No progress", `Let q₃ and q₄ fall below 0.001.\n\nReward: initial q₃ value is multiplied by 1.2.`, () => q3 < 0.001 && q4 < 0.001);
+        achievement3 = theory.createAchievement(2, achievement_category1, "Decay was too strong", `Perform a gamma reset.\n\nReward: \\times \\gamma gain by 2.`, () => gammaResets > 0);
+    }
+
+    {
+        theory.createStoryChapter(0, "A Reminder from the Past", `You were, as they'd say, "chilling" at your very own house. You don't need to worry about anything at this point.
+The amount of money you got from that little equation from your olden days was enough to sustain you for the rest of your days.
+
+One day, a group of students that you once graduated decided to have a party specifically for you. You shared some stories, some laughs, food, and drinks.
+
+One student asked: "How did you come up with the now-famous equation? And why did you stop at that?" The one that made me filthy rich and brought together so many students in one place.
+You told them how and as you do that, you reminisced. Despite it being effectively a job that made you a lot of money, you enjoyed it.
+Yet, even you couldn't quite tell why you stopped there.
+Your students were flourishing, and they even had their own students... why couldn't you still do the same?
+
+"Weierstrass Sine Product" by ███████, "Sequential Limits" by ████████, "Euler's Formula" by ██████, ████, and ██████, and "Convergents to √2" by ████████.
+Those were the projects your students had a hand in. Those were the projects they had researched to their limits.
+
+You may have retired, but that doesn't mean you can't dedicate a bit of yourself to something you enjoy just as much as you did with that equation, just as much as they did with their projects.
+It can be a hobby that you do on a lonely evening.
+
+You had decided to be ambitious and look into the "Theory of Everything" as your first candidate.`, () => true);
+
+        theory.createStoryChapter(1, "Underestimation", `You've underestimated this theory. Maybe it wasn't the greatest pick as you thought initially.
+Still, though, everything has been merely a refresher for your mind so far.
+
+You acknowledge that at this rate you'll soon start making no progress.
+You must adjust more constants for this to work out.`, () => maxRho >= 1000);
+    }
 
     updateAvailability();
 };
@@ -48,17 +176,54 @@ var updateAvailability = () => {
 };
 
 var getInternalState = () => JSON.stringify({
+    maxRho: maxRho.toBase64String(),
+    q1: q1.toBase64String(),
+    q2: q2.toBase64String(),
+    q3: q3.toBase64String(),
+    q4: q4.toBase64String(),
+    gammaResets,
+    gammaCurrencyTotal: gammaCurrencyTotal.toBase64String(),
 });
 
 var setInternalState = (stateStr) => {
-    if(!stateStr) return;
+    if (!stateStr) return;
 
     let state = JSON.parse(stateStr);
+    maxRho = BigNumber.fromBase64String(state.maxRho);
+    q1 = BigNumber.fromBase64String(state.q1);
+    q2 = BigNumber.fromBase64String(state.q2);
+    q3 = BigNumber.fromBase64String(state.q3);
+    q4 = BigNumber.fromBase64String(state.q4);
+    gammaResets = state.gammaResets;
+    gammaCurrencyTotal = BigNumber.fromBase64String(state.gammaCurrencyTotal || BigNumber.ONE.toBase64String());
 };
 
 var tick = (elapsedTime, multiplier) => {
-    let dt = BigNumber.from(elapsedTime * multiplier);
+    let dt = BigNumber.from(elapsedTime * multiplier) * getTickspeed();
     let bonus = theory.publicationMultiplier;
+
+    if (dq1.level > 0) {
+        // TODO: DE
+        let dq1 = getDQ1() * q2;
+        let dq2 = getDQ2() * q3;
+        let dq3 = getDQ3() * q4;
+        let dq4 = getDQ4();
+        let q1_dq1 = calculateXDxSoftcapped(q1, dq1 * dt);
+        let q2_dq2 = calculateXDxSoftcapped(q2, dq2 * dt);
+        let q3_dq3 = calculateXDxSoftcapped(q3, dq3 * dt);
+        let q4_dq4 = calculateXDxSoftcapped(q4, dq4 * dt);
+        q1 = q1_dq1[0] - q1 / 100 * dt; dq1 = q1_dq1[1] - q1 / 100 * dt;
+        q2 = q2_dq2[0] - q2 / 100 * dt; dq2 = q2_dq2[1] - q2 / 100 * dt;
+        q3 = q3_dq3[0] - q3 / 100 * dt; dq3 = q3_dq3[1] - q3 / 100 * dt;
+        q4 = q4_dq4[0] - q4 / 100 * dt; dq4 = q4_dq4[1] - q4 / 100 * dt;
+    }
+
+    let drho = getGammaUpgGammaMult() * q1;
+    let rho_drho = calculateXDxSoftcapped(currency.value, drho * dt);
+    currency.value = rho_drho[0]; drho = rho_drho[1];
+    if (currency.value > maxRho) {
+        maxRho = currency.value;
+    }
 
     theory.invalidatePrimaryEquation();
     theory.invalidateSecondaryEquation();
@@ -66,28 +231,433 @@ var tick = (elapsedTime, multiplier) => {
     theory.invalidateQuaternaryValues();
 };
 
+var onGammaAdjustmentReset = () => {
+    const dgamma = getGammaPending(currency.value);
+    gammaCurrency.value += dgamma;
+    gammaCurrencyTotal += dgamma;
+    currency.value = BigNumber.ZERO;
+
+    dq1.level = dq2.level = dq3.level = dq4.level = 0;
+    q1 = q2 = BigNumber.ZERO;
+    q3 = q4 = BigNumber.ONE;
+
+    if (achievement2.isUnlocked) {
+        q3 *= 1.2;
+    }
+
+    gammaResets++;
+    maxRho = BigNumber.ZERO;
+    theory.clearGraph();
+};
+
 var postPublish = () => {
 };
 
+let getImageSize = (width) => {
+    if (width >= 1080) return 48;
+    if (width >= 720) return 36;
+    if (width >= 360) return 24;
+    return 20;
+}
+
+let createImageBtn = (params, callback, isAvailable, image) => {
+    let triggerable = true;
+    let borderColor = () => isAvailable() ? Color.BORDER : Color.TRANSPARENT;
+    let frame = ui.createFrame({
+        cornerRadius: 1,
+        margin: new Thickness(2),
+        padding: new Thickness(2),
+        hasShadow: isAvailable,
+        heightRequest: getImageSize(ui.screenWidth),
+        widthRequest: getImageSize(ui.screenWidth),
+        content: ui.createImage({
+            source: image,
+            aspect: Aspect.ASPECT_FIT,
+            useTint: false
+        }),
+        borderColor,
+        ...params
+    });
+    frame.onTouched = (e) => {
+        if (e.type == TouchType.PRESSED) {
+            frame.borderColor = Color.TRANSPARENT;
+        }
+        else if (e.type.isReleased()) {
+            frame.borderColor = borderColor;
+            if (triggerable && isAvailable()) {
+                Sound.playClick();
+                callback();
+            }
+            else {
+                triggerable = true;
+            }
+        }
+        else if (e.type == TouchType.MOVED && (e.x < 0 || e.y < 0 || e.x > frame.width || e.y > frame.height)) {
+            frame.borderColor = borderColor;
+            triggerable = false;
+        }
+    };
+    return frame;
+};
+
 var getPrimaryEquation = () => {
-    let result = ``;
+    let result = `\\begin{array}{}`;
+
+    let rhodot = `q_1`;
+    if (gammaup_gammaMult.level > 0) rhodot += ` \\gamma_1`;
+    result += `\\dot{\\rho} = ${rhodot}`;
+
+    result += `\\end{array}`
     return result;
 };
 
 var getSecondaryEquation = () => {
-    let result = ``;
+    let result = `\\begin{array}{}`;
+
+    if (achievement1.isUnlocked) {
+        result += `(\\forall x)(x > 1 \\Rightarrow \\dot{x} = (\\dot{x})^{0.8})`;
+    }
+
+    result += `\\end{array}`
     return result;
 };
 
+var getTertiaryEquation = () => stringTickspeed((10 * getTickspeed()).toString(4));
+
 var getQuaternaryEntries = () => {
-    let quaternaryEntries = [];
-    return quaternaryEntries;
+    let entries = [];
+
+    entries.push(new QuaternaryEntry("q_1", q1.toString(4)));
+    entries.push(new QuaternaryEntry("q_2", q2.toString(4)));
+    entries.push(new QuaternaryEntry("q_3", q3.toString(4)));
+    entries.push(new QuaternaryEntry("q_4", q4.toString(4)));
+
+    return entries;
+};
+
+var getCurrencyBarDelegate = () => {
+    return ui.createFrame({
+        translationY: -2,
+        heightRequest: 30,
+        content: ui.createStackLayout({
+            orientation: StackOrientation.HORIZONTAL,
+            spacing: 0,
+            children: [
+                ui.createFrame({
+                    column: 0,
+                    horizontalOptions: LayoutOptions.FILL_AND_EXPAND,
+                    verticalOptions: LayoutOptions.FILL_AND_EXPAND,
+                    borderColor: Color.fromRgba(0, 0, 0, 0),
+                    children: [
+                        ui.createLatexLabel({
+                            column: 1,
+                            horizontalTextAlignment: TextAlignment.CENTER,
+                            verticalTextAlignment: TextAlignment.CENTER,
+                            fontSize: 12,
+                            text: () => `$${numberFormat(theory.tau, 2)}${theory.latexSymbol}$`,
+                        }),
+                    ],
+                }),
+                ui.createFrame({
+                    column: 1,
+                    horizontalOptions: LayoutOptions.FILL_AND_EXPAND,
+                    verticalOptions: LayoutOptions.FILL_AND_EXPAND,
+                    borderColor: Color.fromRgba(0, 0, 0, 0),
+                    children: [
+                        ui.createLatexLabel({
+                            column: 1,
+                            horizontalTextAlignment: TextAlignment.CENTER,
+                            verticalTextAlignment: TextAlignment.CENTER,
+                            fontSize: 12,
+                            text: () => `$${numberFormat(currency.value, 2)}\\rho$`,
+                        }),
+                    ],
+                }),
+                ui.createFrame({
+                    column: 2,
+                    horizontalOptions: LayoutOptions.FILL_AND_EXPAND,
+                    verticalOptions: LayoutOptions.FILL_AND_EXPAND,
+                    borderColor: Color.fromRgba(0, 0, 0, 0),
+                    children: [
+                        ui.createLatexLabel({
+                            column: 1,
+                            horizontalTextAlignment: TextAlignment.CENTER,
+                            verticalTextAlignment: TextAlignment.CENTER,
+                            fontSize: 12,
+                            text: () => `$${numberFormat(gammaCurrency.value, 2)}\\gamma$`,
+                        }),
+                    ],
+                    isVisible: () => gammaResets > 0,
+                }),
+            ],
+        }),
+    });
+};
+
+const gammaResetImage = game.settings.theme == Theme.LIGHT
+    ? ImageSource.fromUri('https://raw.githubusercontent.com/BasicallyIAmFox/exponential-idle-cts/refs/heads/main/theory-of-everything/GammaResetLight.png')
+    : ImageSource.fromUri('https://raw.githubusercontent.com/BasicallyIAmFox/exponential-idle-cts/refs/heads/main/theory-of-everything/GammaResetDark.png');
+const gammaResetMenuFrame = createImageBtn({
+    row: 0, column: 0,
+    horizontalOptions: LayoutOptions.START,
+    verticalOptions: LayoutOptions.START,
+    isVisible: () => gammaResets > 0 || maxRho >= 1000,
+}, () => createGammaResetMenu().show(), () => true, gammaResetImage);
+
+var getEquationOverlay = () =>{
+    return ui.createGrid({
+        cascadeInputTransparent: false,
+        children: [
+            ui.createGrid({
+                row: 0, column: 0,
+                margin: new Thickness(4),
+                horizontalOptions: LayoutOptions.START,
+                verticalOptions: LayoutOptions.END,
+                inputTransparent: true,
+                cascadeInputTransparent: false,
+                children: [
+                    gammaResetMenuFrame,
+                ],
+            }),
+        ],
+    });
+};
+
+var createUpgradeBuyableUI = (currency, upgrade) => {
+    return ui.createFrame({
+        backgroundColor: Color.MEDIUM_BACKGROUND,
+        borderColor: Color.BORDER,
+        cornerRadius: 0,
+        hasShadow: false,
+        padding: new Thickness(0),
+        children: [
+            ui.createGrid({
+                horizontalOptions: LayoutOptions.FILL_AND_EXPAND,
+                heightRequest: 50,
+                columnSpacing: 0,
+                padding: new Thickness(0),
+                children: [
+                    ui.createLatexLabel({
+                        horizontalOptions: LayoutOptions.START,
+                        horizontalTextAlignment: TextAlignment.START,
+                        verticalTextAlignment: TextAlignment.CENTER,
+                        margin: new Thickness(15, 0, 15, 0),
+                        textColor: Color.TEXT,
+                        //fontSize: 12,
+                        fontSize: 11,
+                        text: () => upgrade.getDescription(),
+                    }),
+                    ui.createFrame({
+                        borderColor: Color.fromRgba(0, 0, 0, 0),
+                        horizontalOptions: LayoutOptions.END,
+                        children: [
+                            ui.createLatexLabel({
+                                horizontalTextAlignment: TextAlignment.END,
+                                verticalTextAlignment: TextAlignment.START,
+                                margin: new Thickness(10, 10, 10, 0),
+                                fontSize: 12,
+                                text: () => {
+                                    if (upgrade.level >= upgrade.maxLevel)
+                                        return Localization.get(`BuyablesCostBought`);
+
+                                    return `(x1) $${upgrade.cost.getCost(upgrade.level)} ${currency.symbol}$`;
+                                },
+                            }),
+                        ],
+                    }),
+                    ui.createLabel({
+                        horizontalTextAlignment: TextAlignment.END,
+                        verticalTextAlignment: TextAlignment.END,
+                        textColor: Color.TEXT_MEDIUM,
+                        margin: new Thickness(10, 0, 10, 4),
+                        fontSize: 14,
+                        text: () => Localization.get(`BuyablesLevel`, upgrade.maxLevel == 2147483647 ? upgrade.level : `${upgrade.level}/${upgrade.maxLevel}`),
+                    }),
+                    ui.createBox({
+                        horizontalOptions: LayoutOptions.FILL_AND_EXPAND,
+                        color: Color.MEDIUM_BACKGROUND,
+                        opacity: 0.4,
+                        isVisible: () => currency.value < upgrade.cost.getCost(upgrade.level),
+                    }),
+                ],
+            }),
+        ],
+        onTouched: (e) => {
+            if (e.type.isReleased()) {
+                let amount = 1;
+                let cost = upgrade.cost.getCost(upgrade.level);
+
+                if (currency.value >= cost) {
+                    upgrade.level += amount;
+                    currency.value -= cost;
+                }
+            }
+        },
+    });
+};
+
+var createGammaResetMenu = () => {
+    let resetButton = ui.createButton({
+        text: `Reset`,
+        onClicked: () => {
+            let yesButton = ui.createButton({
+                column: 0,
+                text: "Yes",
+            });
+
+            let noButton = ui.createButton({
+                column: 1,
+                text: "No",
+            });
+
+            let confirmationPopup = ui.createPopup({
+                title: "Gamma Adjustment Reset",
+                content: ui.createStackLayout({
+                    children: [
+                        ui.createBox({ heightRequest: 10, color: Color.fromRgba(0, 0, 0, 0) }),
+                        ui.createLatexLabel({
+                            horizontalTextAlignment: TextAlignment.CENTER,
+                            text: `You are about to perform a Gamma Adjustment Reset.`,
+                        }),
+
+                        ui.createBox({ heightRequest: 15, color: Color.fromRgba(0, 0, 0, 0) }),
+                        ui.createLatexLabel({
+                            horizontalTextAlignment: TextAlignment.CENTER,
+                            text: `Do you want to continue?`,
+                        }),
+
+                        ui.createBox({ heightRequest: 10, color: Color.fromRgba(0, 0, 0, 0) }),
+                        ui.createGrid({
+                            children: [
+                                yesButton,
+                                noButton,
+                            ],
+                        }),
+                    ],
+                }),
+            });
+
+            yesButton.onClicked = () => {
+                onGammaAdjustmentReset();
+                confirmationPopup.hide();
+                popup.hide();
+            };
+            noButton.onClicked = () => confirmationPopup.hide();
+
+            confirmationPopup.show();
+        },
+    });
+
+    let resetChildren = [
+        ui.createLatexLabel({
+            horizontalTextAlignment: TextAlignment.CENTER,
+            text: `After you perform $\\Gamma$ Adjustment Reset, you will have:`,
+        }),
+        ui.createGrid({
+            rowDefinitions: ["*", "*"],
+            columnDefinitions: ["*"],
+            children: [
+                ui.createLatexLabel({
+                    row: 0, column: 0,
+                    horizontalTextAlignment: TextAlignment.CENTER,
+                    text: `$\\gamma$`,
+                }),
+                ui.createLatexLabel({
+                    row: 1, column: 0,
+                    horizontalTextAlignment: TextAlignment.CENTER,
+                    text: () => `$${gammaCurrency.value}$ + $${getGammaPending(maxRho)}$`,
+                }),
+            ],
+        }),
+        ui.createLatexLabel({
+            horizontalTextAlignment: TextAlignment.CENTER,
+            text: `$\\rho$, $q_1$, $q_2$, $q_3$, $q_4$ and respective upgrades are reset.`,
+        }),
+        resetButton,
+    ];
+
+    let upgradesChildren = [
+        createUpgradeBuyableUI(gammaCurrency, gammaup_gammaMult),
+    ];
+
+    let popup = ui.createPopup({
+        isPeekable: true,
+        title: `Gamma Adjustment`,
+        content: ui.createStackLayout({
+            children: [
+                ... resetChildren,
+                ui.createBox({ heightRequest: 1 }),
+
+                ui.createLabel({
+                    horizontalTextAlignment: TextAlignment.CENTER,
+                    fontSize: 20,
+                    fontFamily: FontFamily.CMU_BOLD,
+                    text: `Upgrades`,
+                }),
+                ui.createScrollView({
+                    content: ui.createStackLayout({ children: upgradesChildren }),
+                }),
+            ],
+        }),
+    });
+
+    return popup;
 };
 
 var isCurrencyVisible = (index) => index === 0;
-var getTau = () => currency.value;
-var getPublicationMultiplier = (tau) => tau.pow(0.01);
-var getPublicationMultiplierFormula = (symbol) => "" + symbol + "^{0.01}";
+var getTau = () => BigNumber.ZERO;
+var getPublicationMultiplier = (tau) => BigNumber.ONE;
+var getPublicationMultiplierFormula = (symbol) => `\\text{There is no resolution.}`;
 var get2DGraphValue = () => currency.value.sign * (BigNumber.ONE + currency.value.abs()).log10().toNumber();
+
+var getTickspeed = (level = tickspeed.level) => BigNumber.from(tickspeedConsts[level]);
+var getDQ1 = (level = dq1.level) => Utils.getStepwisePowerSum(level, 2, 10, 0) / 10;
+var getDQ2 = (level = dq2.level) => Utils.getStepwisePowerSum(level, 2, 10, 0) / 10;
+var getDQ3 = (level = dq3.level) => Utils.getStepwisePowerSum(level, 2, 10, 0) / 10;
+var getDQ4 = (level = dq4.level) => Utils.getStepwisePowerSum(level, 2, 10, 0) / 10;
+
+var getGammaPending = (rho = maxRho) => {
+    let result = rho >= 1000 ? (rho / 1000).pow(0.1) : BigNumber.ZERO;
+
+    if (achievement3.isUnlocked) {
+        result *= 2;
+    }
+
+    return result;
+};
+var getGammaUpgGammaMult = (level = gammaup_gammaMult.level) => {
+    if (level == 0) return BigNumber.ONE;
+    return (1 + (1 + gammaCurrencyTotal).log()).pow(0.5 * (level - 1) + (256 + gammaCurrencyTotal).log10());
+};
+
+var productionSoftcap = (x) => {
+    if (x > 1) {
+        x = x.pow(0.8);
+    }
+    return x;
+};
+
+var productionSoftcapInverse = (x) => {
+    if (x > 1) {
+        x = x.pow(1 / 0.8);
+    }
+    return x;
+};
+
+var calculateXDxSoftcapped = (x, dx, initialThreshold = BigNumber.ONE, apply = [productionSoftcap, productionSoftcapInverse]) => {
+    if (x < initialThreshold) {
+        let new_x = x + dx;
+        if (new_x >= initialThreshold) {
+            new_x = apply[0](new_x - initialThreshold) + initialThreshold;
+        }
+        dx = new_x - x;
+        x = new_x;
+    } else {
+        const new_x = apply[0](apply[1](x) + dx);
+        dx = new_x - x;
+        x = new_x;
+    }
+    return [x, dx];
+};
 
 init();
