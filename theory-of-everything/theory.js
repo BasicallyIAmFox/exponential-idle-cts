@@ -352,6 +352,7 @@ var getCurrencyBarDelegate = () => {
                             text: () => `$${numberFormat(theory.tau, 2)}${theory.latexSymbol}$`,
                         }),
                     ],
+                    isVisible: () => false,
                 }),
                 ui.createFrame({
                     column: 1,
