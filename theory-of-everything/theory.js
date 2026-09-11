@@ -32,7 +32,7 @@ var q1 = BigNumber.ZERO, q2 = BigNumber.ZERO, q3 = BigNumber.ONE, q4 = BigNumber
 var dq1, dq2, dq3, dq4;
 
 var gammaCurrency;
-var gammaCurrencyTotal;
+var gammaCurrencyTotal = BigNumber.ZERO;
 var gammaResets = 0;
 var gammaup_gammaMult;
 
@@ -144,21 +144,16 @@ var init = () => {
     }
 
     {
-        theory.createStoryChapter(0, "A Reminder from the Past", `You were, as they'd say, "chilling" at your very own house. You don't need to worry about anything at this point.
-The amount of money you got from that little equation from your olden days was enough to sustain you for the rest of your days.
+        theory.createStoryChapter(0, "A Reminder from the Past", `You were, as they'd say, "chilling" at your very own house. You don't need to worry about anything at this point. The amount of money you got from that little equation from your olden days was enough to sustain you for the rest of your days.
 
 One day, a group of students that you once graduated decided to have a party specifically for you. You shared some stories, some laughs, food, and drinks.
 
-One student asked: "How did you come up with the now-famous equation? And why did you stop at that?" The one that made me filthy rich and brought together so many students in one place.
-You told them how and as you do that, you reminisced. Despite it being effectively a job that made you a lot of money, you enjoyed it.
-Yet, even you couldn't quite tell why you stopped there.
-Your students were flourishing, and they even had their own students... why couldn't you still do the same?
+One student asked: "How did you come up with the now-famous equation? And why did you stop at that?" The one that made me filthy rich and brought together so many students in one place. You told them how and as you do that, you reminisced. Despite it being effectively a job that made you a lot of money, you enjoyed it.
+Yet, even you couldn't quite tell why you stopped there. Your students were flourishing, and they even had their own students... why couldn't you still do the same?
 
-"Weierstrass Sine Product" by ███████, "Sequential Limits" by ████████, "Euler's Formula" by ██████, ████, and ██████, and "Convergents to √2" by ████████.
-Those were the projects your students had a hand in. Those were the projects they had researched to their limits.
+"Weierstrass Sine Product" by ███████, "Sequential Limits" by ████████, "Euler's Formula" by ██████, ████, and ██████, and "Convergents to √2" by ████████. Those were the projects your students had a hand in. Those were the projects they had researched to their limits.
 
-You may have retired, but that doesn't mean you can't dedicate a bit of yourself to something you enjoy just as much as you did with that equation, just as much as they did with their projects.
-It can be a hobby that you do on a lonely evening.
+You may have retired, but that doesn't mean you can't dedicate a bit of yourself to something you enjoy just as much as you did with that equation, just as much as they did with their projects. It can be a hobby that you do on a lonely evening.
 
 You had decided to be ambitious and look into the "Theory of Everything" as your first candidate.`, () => true);
 
