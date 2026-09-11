@@ -8,6 +8,8 @@ var getDescription = (_) => {
 var authors = "BasicallyIAmFox";
 var version = 0;
 
+var stage = 0;
+var localDeltaTime = BigNumber.ZERO;
 var achievement1, achievement2, achievement3;
 
 var stringTickspeed = (value) => `\\text{Tickspeed} : \\text{${value}} \\text{ / sec}`;
@@ -30,6 +32,8 @@ var currency;
 var maxRho = BigNumber.ZERO;
 var q1 = BigNumber.ZERO, q2 = BigNumber.ZERO, q3 = BigNumber.ONE, q4 = BigNumber.ONE;
 var dq1, dq2, dq3, dq4;
+var visual_drho = BigNumber.ZERO;
+var visual_dq1 = BigNumber.ZERO, visual_dq2 = BigNumber.ZERO, visual_dq3 = BigNumber.ZERO, visual_dq4 = BigNumber.ZERO;
 
 var gammaCurrency;
 var gammaCurrencyTotal = BigNumber.ZERO;
@@ -124,16 +128,14 @@ var init = () => {
     
     {
         let getDesc = (level) => {
-            if (level === 0) return `\\text{Add } \\gamma_1 \\text{ factor to } \\dot{\\rho} ; \\text{ } \\gamma_1 = (1 + \\ln(1 + \\gamma_{t}))^{\\log_{10}(256 + \\gamma_{t})}`;
+            if (level === 0) return `\\text{Add } \\gamma_1 \\text{ factor to } \\dot{\\rho} ; \\text{ } \\gamma_1 = 2`;
 
-            //return `\\gamma_1 = (1 + \\ln(1 + \\gamma_{t}))^{0.5 \\times (\\text{Level} - 1) + \\log_{10}(256 + \\gamma_{t})}`;
-            return `\\gamma_1 = (1 + \\ln(1 + \\gamma_{t}))^{0.5 \\times ${level - 1} + \\log_{10}(256 + \\gamma_{t})} = ${getGammaUpgGammaMult(level)} \\\\ \\to \\gamma_1 = (1 + \\ln(1 + \\gamma_{t}))^{0.5 \\times ${level} + \\log_{10}(256 + \\gamma_{t})} = ${getGammaUpgGammaMult(level + 1)}`;
+            return `\\gamma_1 = 2^{${level}} \\to \\gamma_1 = 2^{${level + 1}}`;
         };
-        let getInfo = (level) => ``;
+        let getInfo = (level) => `\\gamma_1 = ${getGammaUpgGammaMult(level)}`;
         gammaup_gammaMult = theory.createUpgrade(10, gammaCurrency, new ExponentialCost(1, Math.log2(1.8)));
         gammaup_gammaMult.getDescription = (_) => Utils.getMath(getDesc(gammaup_gammaMult.level));
         gammaup_gammaMult.getInfo = (amount) => Utils.getMathTo(getInfo(gammaup_gammaMult.level), getInfo(gammaup_gammaMult.level + amount));
-        gammaup_gammaMult.isAvailable = false;
     }
 
     let achievement_category1 = theory.createAchievementCategory(0, "Progression");
@@ -168,6 +170,12 @@ You must adjust more constants for this to work out.`, () => maxRho >= 1000);
 };
 
 var updateAvailability = () => {
+    dq1.isAvailable = stage <= 0;
+    dq2.isAvailable = stage <= 0;
+    dq3.isAvailable = stage <= 0;
+    dq4.isAvailable = stage <= 0;
+
+    gammaup_gammaMult.isAvailable = stage === 1;
 };
 
 var getInternalState = () => JSON.stringify({
@@ -197,8 +205,12 @@ var tick = (elapsedTime, multiplier) => {
     let dt = BigNumber.from(elapsedTime * multiplier) * getTickspeed();
     let bonus = theory.publicationMultiplier;
 
+    localDeltaTime = dt;
+
+    visual_dq1 = visual_dq2 = visual_dq3 = visual_dq4 = BigNumber.ZERO;
     if (dq1.level > 0) {
         // TODO: DE
+        let old_q1 = q1, old_q2 = q2, old_q3 = q3, old_q4 = q4;
         let dq1 = getDQ1() * q2;
         let dq2 = getDQ2() * q3;
         let dq3 = getDQ3() * q4;
@@ -215,11 +227,17 @@ var tick = (elapsedTime, multiplier) => {
         dq2 = q2_dq2[1] - q2 / 100 * dt;
         dq3 = q3_dq3[1] - q3 / 100 * dt;
         dq4 = q4_dq4[1] - q4 / 100 * dt;
+        visual_dq1 = (q1 - old_q1) / dt;
+        visual_dq2 = (q2 - old_q2) / dt;
+        visual_dq3 = (q3 - old_q3) / dt;
+        visual_dq4 = (q4 - old_q4) / dt;
     }
 
+    let old_rho = currency.value;
     let drho = getGammaUpgGammaMult() * q1;
     let rho_drho = calculateXDxSoftcapped(currency.value, drho * dt);
     currency.value = rho_drho[0]; drho = rho_drho[1];
+    visual_drho = (currency.value - old_rho) / dt;
     if (currency.value > maxRho) {
         maxRho = currency.value;
     }
@@ -302,23 +320,45 @@ let createImageBtn = (params, callback, isAvailable, image) => {
 var getPrimaryEquation = () => {
     let result = `\\begin{array}{}`;
 
-    let rhodot = `q_1`;
-    if (gammaup_gammaMult.level > 0) rhodot += ` \\gamma_1`;
-    result += `\\dot{\\rho} = ${rhodot}`;
+    if (stage === -1) {
+        result += `\\dot{\\rho} = ${visual_drho.toString(2)}`;
+    }
+    else if (stage === 0) {
+        let rhodot = `q_1`;
+        if (gammaup_gammaMult.level > 0) rhodot += ` \\gamma_1`;
+        result += `\\dot{\\rho} = ${rhodot}`;
+    }
+    else if (stage === 1) {
+        let base = `\\max (\\rho / 1000)^{0.2}`;
+
+        if (achievement3.isUnlocked) {
+            base = `2 \\times ${base}`;
+        }
+
+        result += `d \\gamma = ${base}`;
+    }
 
     result += `\\end{array}`
     return result;
 };
 
 var getSecondaryEquation = () => {
-    theory.secondaryEquationHeight = 50;
-
     let result = `\\begin{array}{}`;
 
-    if (achievement1.isUnlocked) {
-        result += `(\\forall x)(x > 1 \\Rightarrow \\dot{x} = (x^{1.25} + \\dot{x})^{0.8} - x) \\\\`;
+    if (stage === -1) {
+        theory.secondaryEquationHeight = 0;
     }
-    result += `(\\forall q)(\\dot{q} = \\dot{q} - q / 100)`;
+    else if (stage === 0) {
+        theory.secondaryEquationHeight = 50;
+
+        if (achievement1.isUnlocked) {
+            result += `(\\forall x)(x > 1 \\Rightarrow \\dot{x} = (x^{1.25} + \\dot{x})^{0.8} - x) \\\\`;
+        }
+        result += `(\\forall q)(\\dot{q} = \\dot{q} - q / 100)`;
+    }
+    else if (stage === 1) {
+        theory.secondaryEquationHeight = 0;
+    }
 
     result += `\\end{array}`
     return result;
@@ -329,10 +369,21 @@ var getTertiaryEquation = () => stringTickspeed((10 * getTickspeed()).toString(4
 var getQuaternaryEntries = () => {
     let entries = [];
 
-    entries.push(new QuaternaryEntry("q_1", q1.toString(4)));
-    entries.push(new QuaternaryEntry("q_2", q2.toString(4)));
-    entries.push(new QuaternaryEntry("q_3", q3.toString(4)));
-    entries.push(new QuaternaryEntry("q_4", q4.toString(4)));
+    if (stage === -1) {
+        entries.push(new QuaternaryEntry("\\dot{q_1}", visual_dq1.toString(4)));
+        entries.push(new QuaternaryEntry("\\dot{q_2}", visual_dq2.toString(4)));
+        entries.push(new QuaternaryEntry("\\dot{q_3}", visual_dq3.toString(4)));
+        entries.push(new QuaternaryEntry("\\dot{q_4}", visual_dq4.toString(4)));
+    }
+    else if (stage === 0) {
+        entries.push(new QuaternaryEntry("q_1", q1.toString(4)));
+        entries.push(new QuaternaryEntry("q_2", q2.toString(4)));
+        entries.push(new QuaternaryEntry("q_3", q3.toString(4)));
+        entries.push(new QuaternaryEntry("q_4", q4.toString(4)));
+    }
+    else if (stage === 1) {
+        entries.push(new QuaternaryEntry("d\\gamma", getGammaPending()));
+    }
 
     return entries;
 };
@@ -407,8 +458,9 @@ const gammaResetMenuFrame = createImageBtn({
     isVisible: () => gammaResets > 0 || maxRho >= 1000,
 }, () => createGammaResetMenu().show(), () => true, gammaResetImage);
 
-var getEquationOverlay = () =>{
+var getEquationOverlay = () => {
     return ui.createGrid({
+        inputTransparent: true,
         cascadeInputTransparent: false,
         children: [
             ui.createGrid({
@@ -423,79 +475,6 @@ var getEquationOverlay = () =>{
                 ],
             }),
         ],
-    });
-};
-
-var createUpgradeBuyableUI = (currency, upgrade) => {
-    return ui.createFrame({
-        backgroundColor: Color.MEDIUM_BACKGROUND,
-        borderColor: Color.BORDER,
-        cornerRadius: 0,
-        hasShadow: false,
-        padding: new Thickness(0),
-        children: [
-            ui.createGrid({
-                horizontalOptions: LayoutOptions.FILL_AND_EXPAND,
-                heightRequest: 50,
-                columnSpacing: 0,
-                padding: new Thickness(0),
-                children: [
-                    ui.createLatexLabel({
-                        horizontalOptions: LayoutOptions.START,
-                        horizontalTextAlignment: TextAlignment.START,
-                        verticalTextAlignment: TextAlignment.CENTER,
-                        margin: new Thickness(15, 0, 15, 0),
-                        textColor: Color.TEXT,
-                        //fontSize: 12,
-                        fontSize: 11,
-                        text: () => upgrade.getDescription(),
-                    }),
-                    ui.createFrame({
-                        borderColor: Color.fromRgba(0, 0, 0, 0),
-                        horizontalOptions: LayoutOptions.END,
-                        children: [
-                            ui.createLatexLabel({
-                                horizontalTextAlignment: TextAlignment.END,
-                                verticalTextAlignment: TextAlignment.START,
-                                margin: new Thickness(10, 10, 10, 0),
-                                fontSize: 12,
-                                text: () => {
-                                    if (upgrade.level >= upgrade.maxLevel)
-                                        return Localization.get(`BuyablesCostBought`);
-
-                                    return `(x1) $${upgrade.cost.getCost(upgrade.level)} ${currency.symbol}$`;
-                                },
-                            }),
-                        ],
-                    }),
-                    ui.createLabel({
-                        horizontalTextAlignment: TextAlignment.END,
-                        verticalTextAlignment: TextAlignment.END,
-                        textColor: Color.TEXT_MEDIUM,
-                        margin: new Thickness(10, 0, 10, 4),
-                        fontSize: 14,
-                        text: () => Localization.get(`BuyablesLevel`, upgrade.maxLevel == 2147483647 ? upgrade.level : `${upgrade.level}/${upgrade.maxLevel}`),
-                    }),
-                    ui.createBox({
-                        horizontalOptions: LayoutOptions.FILL_AND_EXPAND,
-                        color: Color.MEDIUM_BACKGROUND,
-                        opacity: 0.4,
-                        isVisible: () => currency.value < upgrade.cost.getCost(upgrade.level),
-                    }),
-                ],
-            }),
-        ],
-        onTouched: (e) => {
-            if (e.type.isReleased()) {
-                let amount = 1;
-                let cost = upgrade.cost.getCost(upgrade.level);
-
-                if (currency.value >= cost) {
-                    upgrade.level += amount;
-                    currency.value -= cost;
-                }
-            }
-        },
     });
 };
 
@@ -579,32 +558,32 @@ var createGammaResetMenu = () => {
         resetButton,
     ];
 
-    let upgradesChildren = [
-        createUpgradeBuyableUI(gammaCurrency, gammaup_gammaMult),
-    ];
-
     let popup = ui.createPopup({
         isPeekable: true,
         title: `Gamma Adjustment`,
         content: ui.createStackLayout({
-            children: [
-                ... resetChildren,
-                ui.createBox({ heightRequest: 1 }),
-
-                ui.createLabel({
-                    horizontalTextAlignment: TextAlignment.CENTER,
-                    fontSize: 20,
-                    fontFamily: FontFamily.CMU_BOLD,
-                    text: `Upgrades`,
-                }),
-                ui.createScrollView({
-                    content: ui.createStackLayout({ children: upgradesChildren }),
-                }),
-            ],
+            children: resetChildren,
         }),
     });
 
     return popup;
+};
+
+var canGoToPreviousStage = () => stage > -1;
+var goToPreviousStage = () => {
+    stage--;
+    updateAvailability();
+};
+var canGoToNextStage = () => {
+    if (stage < 1 && gammaResets > 0) {
+        return true;
+    } else {
+        return stage < 0;
+    }
+};
+var goToNextStage = () => {
+    stage++;
+    updateAvailability();
 };
 
 var isCurrencyVisible = (index) => index === 0;
@@ -628,10 +607,7 @@ var getGammaPending = (rho = maxRho) => {
 
     return result;
 };
-var getGammaUpgGammaMult = (level = gammaup_gammaMult.level) => {
-    if (level == 0) return BigNumber.ONE;
-    return (1 + (1 + gammaCurrencyTotal).log()).pow(0.5 * (level - 1) + (256 + gammaCurrencyTotal).log10());
-};
+var getGammaUpgGammaMult = (level = gammaup_gammaMult.level) => BigNumber.TWO.pow(level);
 
 var productionSoftcap = (x) => {
     if (x > 1) {
