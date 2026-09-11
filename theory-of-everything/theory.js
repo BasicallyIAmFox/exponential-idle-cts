@@ -30,7 +30,6 @@ var currency;
 var maxRho = BigNumber.ZERO;
 var q1 = BigNumber.ZERO, q2 = BigNumber.ZERO, q3 = BigNumber.ONE, q4 = BigNumber.ONE;
 var dq1, dq2, dq3, dq4;
-var visual_dq1 = BigNumber.ZERO, visual_dq2 = BigNumber.ZERO, visual_dq3 = BigNumber.ZERO, visual_dq4 = BigNumber.ZERO;
 
 var gammaCurrency;
 var gammaCurrencyTotal = BigNumber.ZERO;
@@ -87,29 +86,29 @@ var init = () => {
     gammaCurrency = theory.createCurrency(`γ`, `\\gamma`);
 
     {
-        let getDesc = (level) => "\\dot{q}_1=" + getDQ1(level).toString(1) + "\\times q_2 - \\frac{1}{100} q_1";
-        let getInfo = (level) => "\\dot{q}_1=" + visual_dq1.toString(4);
+        let getDesc = (level) => "\\dot{q}_1=" + getDQ1(level).toString(1) + "\\times q_2";
+        let getInfo = (level) => "\\dot{q}_1=" + (getDQ1(level) * q2).toString(4);
         dq1 = theory.createUpgrade(0, currency, new FirstFreeCost(new ExponentialCost(0.1, Math.log2(2e2) / 2)));
         dq1.getDescription = (_) => Utils.getMath(getDesc(dq1.level));
         dq1.getInfo = (amount) => Utils.getMathTo(getInfo(dq1.level), getInfo(dq1.level + amount));
     }
     {
-        let getDesc = (level) => "\\dot{q}_2=" + getDQ2(level).toString(1) + "\\times q_3 - \\frac{1}{100} q_2";
-        let getInfo = (level) => "\\dot{q}_2=" + visual_dq2.toString(4);
+        let getDesc = (level) => "\\dot{q}_2=" + getDQ2(level).toString(1) + "\\times q_3";
+        let getInfo = (level) => "\\dot{q}_2=" + (getDQ2(level) * q3).toString(4);
         dq2 = theory.createUpgrade(1, currency, new FirstFreeCost(new ExponentialCost(1, Math.log2(2e4) / 2)));
         dq2.getDescription = (_) => Utils.getMath(getDesc(dq2.level));
         dq2.getInfo = (amount) => Utils.getMathTo(getInfo(dq2.level), getInfo(dq2.level + amount));
     }
     {
-        let getDesc = (level) => "\\dot{q}_3=" + getDQ3(level).toString(1) + "\\times q_4 - \\frac{1}{100} q_3";
-        let getInfo = (level) => "\\dot{q}_3=" + visual_dq3.toString(4);
+        let getDesc = (level) => "\\dot{q}_3=" + getDQ3(level).toString(1) + "\\times q_4";
+        let getInfo = (level) => "\\dot{q}_3=" + (getDQ3(level) * q4).toString(4);
         dq3 = theory.createUpgrade(2, currency, new ExponentialCost(10000, Math.log2(2e6) / 2));
         dq3.getDescription = (_) => Utils.getMath(getDesc(dq3.level));
         dq3.getInfo = (amount) => Utils.getMathTo(getInfo(dq3.level), getInfo(dq3.level + amount));
     }
     {
-        let getDesc = (level) => "\\dot{q}_4=" + getDQ4(level).toString(1) + " - \\frac{1}{100} q_4";
-        let getInfo = (level) => "\\dot{q}_4=" + visual_dq4.toString(4);
+        let getDesc = (level) => "\\dot{q}_4=" + getDQ4(level).toString(1);
+        let getInfo = (level) => "\\dot{q}_4=" + getDQ4(level).toString(4);
         dq4 = theory.createUpgrade(3, currency, new ExponentialCost(8e20, Math.log2(2e8) / 2));
         dq4.getDescription = (_) => Utils.getMath(getDesc(dq4.level));
         dq4.getInfo = (amount) => Utils.getMathTo(getInfo(dq4.level), getInfo(dq4.level + amount));
@@ -198,29 +197,25 @@ var tick = (elapsedTime, multiplier) => {
     let dt = BigNumber.from(elapsedTime * multiplier) * getTickspeed();
     let bonus = theory.publicationMultiplier;
 
-    // TODO: DE
-    let dq1 = getDQ1() * q2;
-    let dq2 = getDQ2() * q3;
-    let dq3 = getDQ3() * q4;
-    let dq4 = getDQ4();
-    let q1_dq1 = calculateXDxSoftcapped(q1, dq1 * dt);
-    let q2_dq2 = calculateXDxSoftcapped(q2, dq2 * dt);
-    let q3_dq3 = calculateXDxSoftcapped(q3, dq3 * dt);
-    let q4_dq4 = calculateXDxSoftcapped(q4, dq4 * dt);
-    if (getDQ1() > 0) {
+    if (dq1.level > 0) {
+        // TODO: DE
+        let dq1 = getDQ1() * q2;
+        let dq2 = getDQ2() * q3;
+        let dq3 = getDQ3() * q4;
+        let dq4 = getDQ4();
+        let q1_dq1 = calculateXDxSoftcapped(q1, dq1 * dt);
+        let q2_dq2 = calculateXDxSoftcapped(q2, dq2 * dt);
+        let q3_dq3 = calculateXDxSoftcapped(q3, dq3 * dt);
+        let q4_dq4 = calculateXDxSoftcapped(q4, dq4 * dt);
         q1 = q1_dq1[0] - q1 / 100 * dt;
         q2 = q2_dq2[0] - q2 / 100 * dt;
         q3 = q3_dq3[0] - q3 / 100 * dt;
         q4 = q4_dq4[0] - q4 / 100 * dt;
+        dq1 = q1_dq1[1] - q1 / 100 * dt;
+        dq2 = q2_dq2[1] - q2 / 100 * dt;
+        dq3 = q3_dq3[1] - q3 / 100 * dt;
+        dq4 = q4_dq4[1] - q4 / 100 * dt;
     }
-    dq1 = q1_dq1[1] - q1 / 100 * dt;
-    dq2 = q2_dq2[1] - q2 / 100 * dt;
-    dq3 = q3_dq3[1] - q3 / 100 * dt;
-    dq4 = q4_dq4[1] - q4 / 100 * dt;
-    visual_dq1 = dq1 / dt;
-    visual_dq2 = dq2 / dt;
-    visual_dq3 = dq3 / dt;
-    visual_dq4 = dq4 / dt;
 
     let drho = getGammaUpgGammaMult() * q1;
     let rho_drho = calculateXDxSoftcapped(currency.value, drho * dt);
@@ -316,11 +311,14 @@ var getPrimaryEquation = () => {
 };
 
 var getSecondaryEquation = () => {
+    theory.secondaryEquationHeight = 50;
+
     let result = `\\begin{array}{}`;
 
     if (achievement1.isUnlocked) {
-        result += `(\\forall x)(x > 1 \\Rightarrow \\dot{x} = (x^{1.25} + \\dot{x})^{0.8})`;
+        result += `(\\forall x)(x > 1 \\Rightarrow \\dot{x} = (x^{1.25} + \\dot{x})^{0.8}) \\\\`;
     }
+    result += `(\\forall q)(\\dot{q} = \\dot{q} - q / 100)`;
 
     result += `\\end{array}`
     return result;
