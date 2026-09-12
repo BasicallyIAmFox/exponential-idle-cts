@@ -42,6 +42,7 @@ var gammaup_gammaMult;
 
 var autobuyerUnlock, autobuyEnabled;
 var autobuyerUnlockDQ1, autobuyerDQ1Configuration;
+var autobuyerUnlockDQ2, autobuyerDQ2Configuration;
 var autobuyerConfigurationUpgradeMapper = { };
 var autobuyerConfiguration = {
     ["q1"]: {
@@ -203,6 +204,23 @@ var init = () => {
             autobuyerDQ1Configuration.level = 0;
         };
     }
+    {
+        autobuyerUnlockDQ2 = theory.createUpgrade(15, gammaCurrency, new ConstantCost(30));
+        autobuyerUnlockDQ2.description = `Unlock $\\dot{q_2}$ auto-buyer`;
+        autobuyerUnlockDQ2.info = `Allows to automatically purchase $\\dot{q_2}$`;
+        autobuyerUnlockDQ2.maxLevel = 1;
+        autobuyerUnlockDQ2.bought = (_) => {
+            autobuyerConfiguration.q2.enabled = true;
+            updateAvailability();
+        };
+        
+        autobuyerDQ2Configuration = theory.createUpgrade(16, gammaCurrency, new FreeCost());
+        autobuyerDQ2Configuration.getDescription = (_) => `Configure $\\dot{q_2}$ auto-buyer settings`;
+        autobuyerDQ2Configuration.getInfo = (_) => `Configure $\\dot{q_2}$ auto-buyer settings`;
+        autobuyerDQ2Configuration.bought = (_) => {
+            autobuyerDQ2Configuration.level = 0;
+        };
+    }
 
     let achievement_category1 = theory.createAchievementCategory(0, "Progression");
     {
@@ -241,6 +259,8 @@ var updateAvailability = () => {
     autobuyEnabled.isAvailable = gammaResets > 0 && stage === -1 && autobuyerUnlock.level > 0;
     autobuyerUnlockDQ1.isAvailable = autobuyEnabled.isAvailable && autobuyerUnlockDQ1.level < 1;
     autobuyerDQ1Configuration.isAvailable = autobuyEnabled.isAvailable && autobuyerUnlockDQ1.level > 0;
+    autobuyerUnlockDQ2.isAvailable = autobuyEnabled.isAvailable && autobuyerUnlockDQ2.level < 1;
+    autobuyerDQ2Configuration.isAvailable = autobuyEnabled.isAvailable && autobuyerUnlockDQ2.level > 0;
 
     dq1.isAvailable = stage === 0;
     dq2.isAvailable = stage === 0;
