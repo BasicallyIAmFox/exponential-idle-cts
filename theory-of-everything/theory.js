@@ -39,7 +39,7 @@ var visual_dq1 = BigNumber.ZERO, visual_dq2 = BigNumber.ZERO, visual_dq3 = BigNu
 var gammaCurrency;
 var gammaCurrencyTotal = BigNumber.ZERO;
 var gammaResets = 0;
-var gammaup_gammaMult, gammaup_gammaTimeMult, gammaup_gammaTickspeed, gammaup_gammaGainExp;
+var gammaup_gammaMult, gammaup_gammaTimeMult, gammaup_gammaTickspeed, gammaup_gammaDQ2Factor, gammaup_gammaDQ1Scaling, gammaup_gammaGainExp;
 
 var autobuyerUnlock, autobuyEnabled;
 var autobuyerUnlockDQ1, autobuyerDQ1Configuration;
@@ -116,7 +116,7 @@ var init = () => {
     gammaCurrency = theory.createCurrency(`γ`, `\\gamma`);
 
     {
-        let getDesc = (level) => "\\dot{q}_1=" + getDQ1(level).toString(1) + "\\times q_2";
+        let getDesc = (level) => "\\dot{q}_1=" + getDQ1(level).toString(gammaup_gammaDQ1Scaling.level > 0 ? 2 : 1) + "\\times q_2";
         let getInfo = (level) => "\\dot{q}_1=" + (getDQ1(level) * q2).toString(4);
         dq1 = theory.createUpgrade(0, currency, new FirstFreeCost(new ExponentialCost(0.1, Math.log2(2e2) / 2)));
         dq1.getDescription = (_) => Utils.getMath(getDesc(dq1.level));
@@ -124,7 +124,11 @@ var init = () => {
         autobuyerConfigurationUpgradeMapper["q1"] = dq1;
     }
     {
-        let getDesc = (level) => "\\dot{q}_2=" + getDQ2(level).toString(1) + "\\times q_3";
+        let getDesc = (level) => {
+            let result = "\\dot{q}_2=" + getDQ2(level).toString(1) + "\\times q_3";
+            if (gammaup_gammaDQ2Factor.level > 0) result += ` y_4`;
+            return result;
+        };
         let getInfo = (level) => "\\dot{q}_2=" + (getDQ2(level) * q3).toString(4);
         dq2 = theory.createUpgrade(1, currency, new FirstFreeCost(new ExponentialCost(1, Math.log2(2e4) / 2)));
         dq2.getDescription = (_) => Utils.getMath(getDesc(dq2.level));
@@ -208,6 +212,38 @@ var init = () => {
         gammaup_gammaTickspeed.getDescription = (_) => Utils.getMath(getDesc(gammaup_gammaTickspeed.level));
         gammaup_gammaTickspeed.getInfo = (amount) => Utils.getMathTo(getInfo(gammaup_gammaTickspeed.level), getInfo(gammaup_gammaTickspeed.level + amount));
         gammaup_gammaTickspeed.maxLevel = tickspeedConsts.length - tickspeed.maxLevel - 1;
+    }
+    {
+        let getDesc = (level) => {
+            if (level === 0) return `\\text{Add } \\gamma_4 \\text{ factor to } \\dot{q_2} ; \\text{ } \\gamma_4 = 1.1^{0}`;
+
+            return `\\gamma_4 = 1.1^{${level}}`;
+        };
+        let getInfo = (level) => {
+            if (level === 0) return `\\text{Add } \\gamma_4 \\text{ factor to } \\dot{q_2} ; \\text{ } \\gamma_4 = ${getGammaUpgGammaDQ2Factor(0)}`;
+
+            return `\\gamma_4 = ${getGammaUpgGammaDQ2Factor(level)}`;
+        };
+        gammaup_gammaDQ2Factor = theory.createUpgrade(20, gammaCurrency, new ExponentialCost(70, Math.log2(5)));
+        gammaup_gammaDQ2Factor.getDescription = (_) => Utils.getMath(getDesc(gammaup_gammaDQ2Factor.level));
+        gammaup_gammaDQ2Factor.getInfo = (amount) => Utils.getMathTo(getInfo(gammaup_gammaDQ2Factor.level), getInfo(gammaup_gammaDQ2Factor.level + amount));
+        gammaup_gammaDQ2Factor.maxLevel = 3;
+    }
+    {
+        let getDesc = (level) => {
+            if (level === 0) return `\\text{Add } \\gamma_5 \\text{ term to } \\dot{q_1} \\text{ scaling} ; \\text{ } \\gamma_5 = 0.1 \\times 0`;
+
+            return `\\gamma_5 = 0.1 \\times ${level}`;
+        };
+        let getInfo = (level) => {
+            if (level === 0) return `\\text{Add } \\gamma_5 \\text{ term to } \\dot{q_1} \\text{ scaling} ; \\text{ } \\gamma_5 = 0.1`;
+
+            return `\\gamma_5 = ${getGammaUpgGammaDQ1Scaling(level)}`;
+        };
+        gammaup_gammaDQ1Scaling = theory.createUpgrade(21, gammaCurrency, new ExponentialCost(100, Math.log2(7)));
+        gammaup_gammaDQ1Scaling.getDescription = (_) => Utils.getMath(getDesc(gammaup_gammaDQ1Scaling.level));
+        gammaup_gammaDQ1Scaling.getInfo = (amount) => Utils.getMathTo(getInfo(gammaup_gammaDQ1Scaling.level), getInfo(gammaup_gammaDQ1Scaling.level + amount));
+        gammaup_gammaDQ1Scaling.maxLevel = 3;
     }
     {
         let getDesc = (level) => `\\gamma_6 = 0.04 \\times ${level}`;
@@ -313,6 +349,8 @@ var updateAvailability = () => {
     gammaup_gammaMult.isAvailable = stage === 1;
     gammaup_gammaTimeMult.isAvailable = stage === 1;
     gammaup_gammaTickspeed.isAvailable = stage === 1;
+    gammaup_gammaDQ2Factor.isAvailable = stage === 1;
+    gammaup_gammaDQ1Scaling.isAvailable = stage === 1;
     gammaup_gammaGainExp.isAvailable = stage === 1;
 };
 
@@ -418,7 +456,7 @@ var tick = (elapsedTime, multiplier) => {
 };
 
 var onGammaAdjustmentReset = () => {
-    const dgamma = getGammaPending(currency.value);
+    const dgamma = getGammaPending();
     gammaCurrency.value += dgamma;
     gammaCurrencyTotal += dgamma;
     currency.value = BigNumber.ZERO;
@@ -780,8 +818,8 @@ var get2DGraphValue = () => currency.value.sign * (BigNumber.ONE + currency.valu
 
 var getTn = (tickspeedLevel) => tickspeedLevel + gammaup_gammaTickspeed.level;
 var getTickspeed = (level = getTn(tickspeed.level)) => BigNumber.from(tickspeedConsts[level]);
-var getDQ1 = (level = dq1.level) => Utils.getStepwisePowerSum(level, 2, 10, 0) / 10;
-var getDQ2 = (level = dq2.level) => Utils.getStepwisePowerSum(level, 2, 10, 0) / 10;
+var getDQ1 = (level = dq1.level) => Utils.getStepwisePowerSum(level, 2 + getGammaUpgGammaDQ1Scaling(), 10, 0) / 10;
+var getDQ2 = (level = dq2.level) => Utils.getStepwisePowerSum(level, 2, 10, 0) / 10 * getGammaUpgGammaDQ2Factor();
 var getDQ3 = (level = dq3.level) => Utils.getStepwisePowerSum(level, 2, 10, 0) / 10;
 var getDQ4 = (level = dq4.level) => Utils.getStepwisePowerSum(level, 2, 10, 0) / 10;
 
@@ -796,6 +834,8 @@ var getGammaPending = (rho = maxRho) => {
 };
 var getGammaUpgGammaMult = (level = gammaup_gammaMult.level) => BigNumber.from(1.8).pow(level);
 var getGammaUpgGammaTimeMult = (level = gammaup_gammaTimeMult.level) => 1 + t.pow(level ** 0.6 / 4);
+var getGammaUpgGammaDQ2Factor = (level = gammaup_gammaDQ2Factor.level) => BigNumber.from(1.1).pow(level);
+var getGammaUpgGammaDQ1Scaling = (level = gammaup_gammaDQ1Scaling.level) => 0.1 * level;
 var getGammaUpgGammaGainExp = (level = gammaup_gammaGainExp.level) => 0.04 * level;
 
 var productionSoftcap = (x) => {
