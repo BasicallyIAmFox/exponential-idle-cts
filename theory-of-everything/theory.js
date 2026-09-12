@@ -353,6 +353,8 @@ var tick = (elapsedTime, multiplier) => {
         visual_dq2 = (q2 - old_q2) / dt;
         visual_dq3 = (q3 - old_q3) / dt;
         visual_dq4 = (q4 - old_q4) / dt;
+
+        t += dt;
     }
 
     let old_rho = currency.value;
@@ -383,8 +385,6 @@ var tick = (elapsedTime, multiplier) => {
             }
         });
     }
-
-    t += dt;
 
     theory.invalidatePrimaryEquation();
     theory.invalidateSecondaryEquation();
