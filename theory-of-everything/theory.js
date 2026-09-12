@@ -432,6 +432,7 @@ var onGammaAdjustmentReset = () => {
     autobuyerConfiguration.q3.autobuyTimer = autobuyerConfigurationCooldown.q3;
     autobuyerConfiguration.q4.autobuyTimer = autobuyerConfigurationCooldown.q4;
 
+    t = BigNumber.ZERO;
     gammaResets++;
     maxRho = BigNumber.ZERO;
     theory.clearGraph();
