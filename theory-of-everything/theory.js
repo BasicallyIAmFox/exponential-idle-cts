@@ -39,7 +39,7 @@ var visual_dq1 = BigNumber.ZERO, visual_dq2 = BigNumber.ZERO, visual_dq3 = BigNu
 var gammaCurrency;
 var gammaCurrencyTotal = BigNumber.ZERO;
 var gammaResets = 0;
-var gammaup_gammaMult, gammaup_gammaTimeMult, gammaup_gammaGainExp;
+var gammaup_gammaMult, gammaup_gammaTimeMult, gammaup_gammaTickspeed, gammaup_gammaGainExp;
 
 var autobuyerUnlock, autobuyEnabled;
 var autobuyerUnlockDQ1, autobuyerDQ1Configuration;
@@ -152,12 +152,16 @@ var init = () => {
         autobuyerConfigurationUpgradeMapper["q4"] = dq4;
     }
     {
-        let getDesc = (level) => "\\dot{t}=" + (11 - level) + "/ 2^{" + (10 - level) + "}";
-        let getInfo = (level) => "\\dot{t}=" + getTickspeed(level).toString(4);
+        let getDesc = (level) => {
+            let result = `n_t = ${level}`;
+            if (gammaup_gammaTickspeed.level > 0) result += ` + \\gamma_3`;
+            return result;
+        };
+        let getInfo = (_) => `n_t=${getTn()}`;
         tickspeed = theory.createPermanentUpgrade(3, currency, new ExponentialCost(2, Math.log2(80)));
         tickspeed.getDescription = (_) => Utils.getMath(getDesc(tickspeed.level));
         tickspeed.getInfo = (amount) => Utils.getMathTo(getInfo(tickspeed.level), getInfo(tickspeed.level + amount));
-        tickspeed.maxLevel = tickspeedConsts.length - 1;
+        tickspeed.maxLevel = 4;
     }
     
     {
@@ -177,9 +181,9 @@ var init = () => {
     }
     {
         let getDesc = (level) => {
-            if (level === 0) return `\\text{Add } \\gamma_2 \\text{ factor to } \\dot{\\rho} ; \\text{ } \\gamma_2 = (1000 \\times 1)^{(500 + 10 \\times 0 - t) / (1000 + 0)}`;
+            if (level === 0) return `\\text{Add } \\gamma_2 \\text{ factor to } \\dot{\\rho} ; \\text{ } \\gamma_2 = (1000)^{(500 - t) / 1000}`;
 
-            return `\\gamma_2 = 1 + (1000 \\times ${level})^{(500 + 10 \\times ${level - 1} - t) / (1000 + ${level - 1})}`;
+            return `\\gamma_2 = 1 + {${1000 * level}}^{(${500 + 10 * (level - 1)} - t) / ${1000 + (level - 1)}}`;
         };
         let getInfo = (level) => {
             if (level === 0) return `\\text{Add } \\gamma_2 \\text{ factor to } \\dot{\\rho} ; \\text{ } \\gamma_2 = ${getGammaUpgGammaTimeMult(0)}`;
@@ -189,6 +193,22 @@ var init = () => {
         gammaup_gammaTimeMult = theory.createUpgrade(17, gammaCurrency, new ExponentialCost(1, Math.log2(1.4)));
         gammaup_gammaTimeMult.getDescription = (_) => Utils.getMath(getDesc(gammaup_gammaTimeMult.level));
         gammaup_gammaTimeMult.getInfo = (amount) => Utils.getMathTo(getInfo(gammaup_gammaTimeMult.level), getInfo(gammaup_gammaTimeMult.level + amount));
+    }
+    {
+        let getDesc = (level) => {
+            if (level === 0) return `\\text{Add } \\gamma_3 \\text{ term to } n_t ; \\text{ } \\gamma_3 = 0`;
+
+            return `\\gamma_3 = ${level}`;
+        };
+        let getInfo = (level) => {
+            if (level === 0) return `\\text{Add } \\gamma_3 \\text{ term to } n_t ; \\text{ } \\gamma_3 = 0`;
+
+            return `\\gamma_3 = ${level}`;
+        };
+        gammaup_gammaTickspeed = theory.createUpgrade(19, gammaCurrency, new ExponentialCost(1, Math.log2(14.5)));
+        gammaup_gammaTickspeed.getDescription = (_) => Utils.getMath(getDesc(gammaup_gammaTickspeed.level));
+        gammaup_gammaTickspeed.getInfo = (amount) => Utils.getMathTo(getInfo(gammaup_gammaTickspeed.level), getInfo(gammaup_gammaTickspeed.level + amount));
+        gammaup_gammaTickspeed.maxLevel = tickspeedConsts.length - tickspeed.maxLevel - 1;
     }
     {
         let getDesc = (level) => `\\gamma_6 = 0.05 \\times ${level}`;
@@ -293,6 +313,7 @@ var updateAvailability = () => {
 
     gammaup_gammaMult.isAvailable = stage === 1;
     gammaup_gammaTimeMult.isAvailable = stage === 1;
+    gammaup_gammaTickspeed.isAvailable = stage === 1;
     gammaup_gammaGainExp.isAvailable = stage === 1;
 };
 
@@ -358,7 +379,7 @@ var tick = (elapsedTime, multiplier) => {
     }
 
     let old_rho = currency.value;
-    let drho = getGammaUpgGammaMult() * q1;
+    let drho = getGammaUpgGammaMult() * getGammaUpgGammaTimeMult() * q1;
     let rho_drho = calculateXDxSoftcapped(currency.value, drho * dt);
     currency.value = rho_drho[0]; drho = rho_drho[1];
     visual_drho = (currency.value - old_rho) / dt;
@@ -495,10 +516,18 @@ var getSecondaryEquation = () => {
     let result = `\\begin{array}{}`;
 
     if (stage === -1) {
-        theory.secondaryEquationHeight = 0;
+        theory.secondaryEquationHeight = 20;
+        theory.secondaryEquationScale = 1;
+
+        result += `\\dot{t} = n_t / 2^{n_t - 1} \\\\`;
+        result += `n_t = ${tickspeed.level}`;
+        if (gammaup_gammaTickspeed.level > 0) result += ` + \\gamma_3`;
+        result += `\\\\`;
+        result += `\\\\ \\text{Tickspeed = } 10 \\dot{t}`;
     }
     else if (stage === 0) {
         theory.secondaryEquationHeight = 50;
+        theory.secondaryEquationScale = 1;
 
         if (achievement1.isUnlocked) {
             result += `(\\forall x)(x > 1 \\Rightarrow \\dot{x} = (x^{1.25} + \\dot{x})^{0.8} - x) \\\\`;
@@ -507,6 +536,7 @@ var getSecondaryEquation = () => {
     }
     else if (stage === 1) {
         theory.secondaryEquationHeight = 0;
+        theory.secondaryEquationScale = 1;
     }
 
     result += `\\end{array}`
@@ -740,7 +770,8 @@ var getPublicationMultiplier = (tau) => BigNumber.ONE;
 var getPublicationMultiplierFormula = (symbol) => `\\text{There is no resolution.}`;
 var get2DGraphValue = () => currency.value.sign * (BigNumber.ONE + currency.value.abs()).log10().toNumber();
 
-var getTickspeed = (level = tickspeed.level) => BigNumber.from(tickspeedConsts[level]);
+var getTn = () => tickspeed.level + gammaup_gammaTickspeed.level;
+var getTickspeed = (level = getTn()) => BigNumber.from(tickspeedConsts[level]);
 var getDQ1 = (level = dq1.level) => Utils.getStepwisePowerSum(level, 2, 10, 0) / 10;
 var getDQ2 = (level = dq2.level) => Utils.getStepwisePowerSum(level, 2, 10, 0) / 10;
 var getDQ3 = (level = dq3.level) => Utils.getStepwisePowerSum(level, 2, 10, 0) / 10;
