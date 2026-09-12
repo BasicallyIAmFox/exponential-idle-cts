@@ -211,11 +211,9 @@ var init = () => {
         gammaup_gammaTickspeed.maxLevel = tickspeedConsts.length - tickspeed.maxLevel - 1;
     }
     {
-        let getDesc = (level) => `\\gamma_6 = 0.03 \\times ${level}`;
+        let getDesc = (level) => `\\gamma_6 = 0.04 \\times ${level}`;
         let getInfo = (level) => `\\gamma_6 = ${getGammaUpgGammaGainExp(level)}`;
-        gammaup_gammaGainExp = theory.createUpgrade(18, gammaCurrency, new CompositeCost(
-            2, new ExponentialCost(10, Math.log2(4)), new ExponentialCost(10 * (4 ** 2), Math.log2(8))
-        ));
+        gammaup_gammaGainExp = theory.createUpgrade(18, gammaCurrency, new ExponentialCost(10, Math.log2(3)));
         gammaup_gammaGainExp.getDescription = (_) => Utils.getMath(getDesc(gammaup_gammaGainExp.level));
         gammaup_gammaGainExp.getInfo = (amount) => Utils.getMathTo(getInfo(gammaup_gammaGainExp.level), getInfo(gammaup_gammaGainExp.level + amount));
         gammaup_gammaGainExp.maxLevel = 6;
@@ -781,7 +779,7 @@ var getDQ3 = (level = dq3.level) => Utils.getStepwisePowerSum(level, 2, 10, 0) /
 var getDQ4 = (level = dq4.level) => Utils.getStepwisePowerSum(level, 2, 10, 0) / 10;
 
 var getGammaPending = (rho = maxRho) => {
-    let result = rho >= 1000 ? (rho / 1000).pow(0.15 + getGammaUpgGammaGainExp()) : BigNumber.ZERO;
+    let result = rho >= 1000 ? (rho / 1000).pow(0.16 + getGammaUpgGammaGainExp()) : BigNumber.ZERO;
 
     if (achievement3.isUnlocked) {
         result *= 2;
@@ -791,7 +789,7 @@ var getGammaPending = (rho = maxRho) => {
 };
 var getGammaUpgGammaMult = (level = gammaup_gammaMult.level) => BigNumber.TWO.pow(level);
 var getGammaUpgGammaTimeMult = (level = gammaup_gammaTimeMult.level) => 1 + (BigNumber.THOUSAND * level).pow((500 + 10 * (level - 1) - t) / (1000 + (level - 1)));
-var getGammaUpgGammaGainExp = (level = gammaup_gammaGainExp.level) => 0.03 * level;
+var getGammaUpgGammaGainExp = (level = gammaup_gammaGainExp.level) => 0.04 * level;
 
 var productionSoftcap = (x) => {
     if (x > 1) {
