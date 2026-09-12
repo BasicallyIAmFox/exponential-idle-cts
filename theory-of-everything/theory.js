@@ -48,19 +48,15 @@ var autobuyerConfigurationUpgradeMapper = { };
 var autobuyerConfiguration = {
     ["q1"]: {
         autobuyTimer: 999,
-        enabled: false,
     },
     ["q2"]: {
         autobuyTimer: 999,
-        enabled: false,
     },
     ["q3"]: {
         autobuyTimer: 999,
-        enabled: false,
     },
     ["q4"]: {
         autobuyTimer: 999,
-        enabled: false,
     },
 };
 var autobuyerConfigurationCooldown = {
@@ -150,6 +146,9 @@ var init = () => {
         dq4.getDescription = (_) => Utils.getMath(getDesc(dq4.level));
         dq4.getInfo = (amount) => Utils.getMathTo(getInfo(dq4.level), getInfo(dq4.level + amount));
         autobuyerConfigurationUpgradeMapper["q4"] = dq4;
+    }
+    {
+        theory.createBuyAllUpgrade(0, currency, 10000);
     }
     {
         let getDesc = (level) => {
@@ -387,8 +386,11 @@ var tick = (elapsedTime, multiplier) => {
         maxRho = currency.value;
     }
 
+    autobuyEnabled.isAutoBuyable = false;
+    autobuyerDQ1Configuration.isAutoBuyable = false;
+    autobuyerDQ2Configuration.isAutoBuyable = false;
     if (autobuyEnabled.level < 1) {
-        const autobuyDt = dt * multiplier;
+        const autobuyDt = dt;
 
         Object.keys(autobuyerConfiguration).forEach(key => {
             const value = autobuyerConfiguration[key];
@@ -400,7 +402,9 @@ var tick = (elapsedTime, multiplier) => {
                 const upgrade = autobuyerConfigurationUpgradeMapper[key];
                 const prev_available = upgrade.isAvailable;
                 upgrade.isAvailable = true;
-                upgrade.buy(1);
+                if (upgrade.isAutoBuyable) {
+                    upgrade.buy(1);
+                }
                 upgrade.isAvailable = prev_available;
                 value.autobuyTimer = cooldown;
             }
@@ -502,7 +506,7 @@ var getPrimaryEquation = () => {
         result += `\\dot{\\rho} = ${rhodot}`;
     }
     else if (stage === 1) {
-        let base = `\\max (\\rho / 1000)^{0.16 + \\gamma_6}`;
+        let base = `(\\bar{\\rho})^{0.16 + \\gamma_6}`;
         if (achievement3.isUnlocked) {
             base = `2 \\times ${base}`;
         }
@@ -536,8 +540,10 @@ var getSecondaryEquation = () => {
         result += `(\\forall q)(\\dot{q} = \\dot{q} - q / 100)`;
     }
     else if (stage === 1) {
-        theory.secondaryEquationHeight = 0;
+        theory.secondaryEquationHeight = 20;
         theory.secondaryEquationScale = 1;
+
+        result += `\\bar{\\rho} = \\max {\\rho / 1000}`;
     }
 
     result += `\\end{array}`
