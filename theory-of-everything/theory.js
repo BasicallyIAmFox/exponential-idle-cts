@@ -168,7 +168,7 @@ var init = () => {
 
             return `\\gamma_1 = ${getGammaUpgGammaMult(level)}`;
         };
-        gammaup_gammaMult = theory.createUpgrade(10, gammaCurrency, new ExponentialCost(1, Math.log2(3)));
+        gammaup_gammaMult = theory.createUpgrade(10, gammaCurrency, new ExponentialCost(1, Math.log2(1.8)));
         gammaup_gammaMult.getDescription = (_) => Utils.getMath(getDesc(gammaup_gammaMult.level));
         gammaup_gammaMult.getInfo = (amount) => Utils.getMathTo(getInfo(gammaup_gammaMult.level), getInfo(gammaup_gammaMult.level + amount));
     }
