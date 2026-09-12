@@ -222,7 +222,7 @@ var init = () => {
         let getInfo = (level) => {
             if (level === 0) return `\\text{Add } \\gamma_4 \\text{ factor to } \\dot{q_2} ; \\text{ } \\gamma_4 = ${getGammaUpgGammaDQ2Factor(0)}`;
 
-            return `\\gamma_4 = ${getGammaUpgGammaDQ2Factor(level)}`;
+            return `\\gamma_4 = ${BigNumber.from(getGammaUpgGammaDQ2Factor(level))}`;
         };
         gammaup_gammaDQ2Factor = theory.createUpgrade(20, gammaCurrency, new ExponentialCost(70, Math.log2(5)));
         gammaup_gammaDQ2Factor.getDescription = (_) => Utils.getMath(getDesc(gammaup_gammaDQ2Factor.level));
@@ -238,7 +238,7 @@ var init = () => {
         let getInfo = (level) => {
             if (level === 0) return `\\text{Add } \\gamma_5 \\text{ term to } \\dot{q_1} \\text{ scaling} ; \\text{ } \\gamma_5 = 0.1`;
 
-            return `\\gamma_5 = ${getGammaUpgGammaDQ1Scaling(level)}`;
+            return `\\gamma_5 = ${BigNumber.from(getGammaUpgGammaDQ1Scaling(level))}`;
         };
         gammaup_gammaDQ1Scaling = theory.createUpgrade(21, gammaCurrency, new ExponentialCost(100, Math.log2(7)));
         gammaup_gammaDQ1Scaling.getDescription = (_) => Utils.getMath(getDesc(gammaup_gammaDQ1Scaling.level));
