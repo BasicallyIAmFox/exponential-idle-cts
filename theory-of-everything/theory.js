@@ -180,9 +180,9 @@ var init = () => {
     }
     {
         let getDesc = (level) => {
-            if (level === 0) return `\\text{Add } \\gamma_2 \\text{ factor to } \\dot{\\rho} ; \\text{ } \\gamma_2 = 1 + 1 \\sqrt{t / 1.2}`;
+            if (level === 0) return `\\text{Add } \\gamma_2 \\text{ factor to } \\dot{\\rho} ; \\text{ } \\gamma_2 = 1 + t^{(1 \\ \\uparrow \\ {0.6}) / 4}`;
 
-            return `\\gamma_2 = 1 + ${level} \\sqrt{t / 1.2}`;
+            return `\\gamma_2 = 1 + t^{(${level} \\ \\uparrow \\ {0.6}) / 4}`;
         };
         let getInfo = (level) => {
             if (level === 0) return `\\text{Add } \\gamma_2 \\text{ factor to } \\dot{\\rho} ; \\text{ } \\gamma_2 = ${getGammaUpgGammaTimeMult(0)}`;
@@ -795,7 +795,7 @@ var getGammaPending = (rho = maxRho) => {
     return result;
 };
 var getGammaUpgGammaMult = (level = gammaup_gammaMult.level) => BigNumber.from(1.8).pow(level);
-var getGammaUpgGammaTimeMult = (level = gammaup_gammaTimeMult.level) => BigNumber.ONE + level * (t / 1.2).sqrt();
+var getGammaUpgGammaTimeMult = (level = gammaup_gammaTimeMult.level) => 1 + t.pow(level ** 0.6 / 4);
 var getGammaUpgGammaGainExp = (level = gammaup_gammaGainExp.level) => 0.04 * level;
 
 var productionSoftcap = (x) => {
