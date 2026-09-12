@@ -502,7 +502,7 @@ var getPrimaryEquation = () => {
         result += `\\dot{\\rho} = ${rhodot}`;
     }
     else if (stage === 1) {
-        let base = `\\max (\\rho / 1000)^{0.15 + \\gamma_6}`;
+        let base = `\\max (\\rho / 1000)^{0.16 + \\gamma_6}`;
         if (achievement3.isUnlocked) {
             base = `2 \\times ${base}`;
         }
