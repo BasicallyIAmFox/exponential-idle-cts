@@ -265,7 +265,7 @@ var init = () => {
             if (level === 0) base = `\\text{Add } \\gamma_7 \\text{ term to all } \\dot{q} \\text{ decay} ; \\text{ } ${base}`;
             return base;
         };
-        gammaup_gammaQDecay = theory.createUpgrade(22, gammaCurrency, new ExponentialCost(10000, Math.log2(5)));
+        gammaup_gammaQDecay = theory.createUpgrade(22, gammaCurrency, new ExponentialCost(10000, Math.log2(1.2)));
         gammaup_gammaQDecay.getDescription = (_) => Utils.getMath(getDesc(gammaup_gammaQDecay.level));
         gammaup_gammaQDecay.getInfo = (amount) => Utils.getMathTo(getInfo(gammaup_gammaQDecay.level), getInfo(gammaup_gammaQDecay.level + amount));
         gammaup_gammaQDecay.maxLevel = 10;
