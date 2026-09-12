@@ -10,7 +10,7 @@ var version = 0;
 
 var stage = 0;
 var localDeltaTime = BigNumber.ZERO;
-var achievement1, achievement2, achievement3, achievement4;
+var achievement1, achievement2, achievement3, achievement5, achievement4;
 
 var stringTickspeed = (value) => `\\text{Tickspeed} : \\text{${value}} \\text{ / sec}`;
 var t = BigNumber.ZERO;
@@ -40,6 +40,7 @@ var gammaCurrency;
 var gammaCurrencyTotal = BigNumber.ZERO;
 var gammaResets = 0;
 var gammaup_gammaMult, gammaup_gammaTimeMult, gammaup_gammaTickspeed, gammaup_gammaDQ2Factor, gammaup_gammaDQ1Scaling, gammaup_gammaGainExp;
+var gammaup_gammaQDecay;
 
 var autobuyerUnlock, autobuyEnabled;
 var autobuyerUnlockDQ1, autobuyerDQ1Configuration;
@@ -211,7 +212,7 @@ var init = () => {
         gammaup_gammaTickspeed = theory.createUpgrade(19, gammaCurrency, new ExponentialCost(3, Math.log2(14.5)));
         gammaup_gammaTickspeed.getDescription = (_) => Utils.getMath(getDesc(gammaup_gammaTickspeed.level));
         gammaup_gammaTickspeed.getInfo = (amount) => Utils.getMathTo(getInfo(gammaup_gammaTickspeed.level), getInfo(gammaup_gammaTickspeed.level + amount));
-        gammaup_gammaTickspeed.maxLevel = tickspeedConsts.length - tickspeed.maxLevel - 1;
+        gammaup_gammaTickspeed.maxLevel = tickspeedConsts.length - tickspeed.maxLevel - 2;
     }
     {
         let getDesc = (level) => {
@@ -222,7 +223,7 @@ var init = () => {
         let getInfo = (level) => {
             if (level === 0) return `\\text{Add } \\gamma_4 \\text{ factor to } \\dot{q_2} ; \\text{ } \\gamma_4 = ${getGammaUpgGammaDQ2Factor(0)}`;
 
-            return `\\gamma_4 = ${BigNumber.from(getGammaUpgGammaDQ2Factor(level))}`;
+            return `\\gamma_4 = ${getGammaUpgGammaDQ2Factor(level)}`;
         };
         gammaup_gammaDQ2Factor = theory.createUpgrade(20, gammaCurrency, new ExponentialCost(70, Math.log2(5)));
         gammaup_gammaDQ2Factor.getDescription = (_) => Utils.getMath(getDesc(gammaup_gammaDQ2Factor.level));
@@ -252,6 +253,22 @@ var init = () => {
         gammaup_gammaGainExp.getDescription = (_) => Utils.getMath(getDesc(gammaup_gammaGainExp.level));
         gammaup_gammaGainExp.getInfo = (amount) => Utils.getMathTo(getInfo(gammaup_gammaGainExp.level), getInfo(gammaup_gammaGainExp.level + amount));
         gammaup_gammaGainExp.maxLevel = 6;
+    }
+    {
+        let getDesc = (level) => {
+            let base = `\\gamma_7 = ${level}`;
+            if (level === 0) base = `\\text{Add } \\gamma_7 \\text{ term to all } \\dot{q} \\text{ decay} ; \\text{ } ${base}`;
+            return base;
+        };
+        let getInfo = (level) = (level) => {
+            let base = `\\gamma_7 = ${getGammaUpgGammaQDecay(level)}`;
+            if (level === 0) base = `\\text{Add } \\gamma_7 \\text{ term to all } \\dot{q} \\text{ decay} ; \\text{ } ${base}`;
+            return base;
+        };
+        gammaup_gammaQDecay = theory.createUpgrade(22, gammaCurrency, new ExponentialCost(10000, Math.log2(5)));
+        gammaup_gammaQDecay.getDescription = (_) => Utils.getMath(getDesc(gammaup_gammaQDecay.level));
+        gammaup_gammaQDecay.getInfo = (amount) => Utils.getMathTo(getInfo(gammaup_gammaQDecay.level), getInfo(gammaup_gammaQDecay.level + amount));
+        gammaup_gammaQDecay.maxLevel = 10;
     }
 
     {
@@ -306,6 +323,7 @@ var init = () => {
         achievement1 = theory.createAchievement(0, achievement_category1, "Achievements are the way to go", `Reach 1ρ, 1 q₁, or 1 q₂.\n\nReward: all production above 1 is powered by 0.8.`, () => currency.value >= 1 || q1 >= 1 || q2 >= 1);
         achievement2 = theory.createAchievement(1, achievement_category1, "No progress", `Let q₃ and q₄ fall below 0.001.\n\nReward: initial q₃ value is multiplied by 1.2.`, () => q3 < 0.001 && q4 < 0.001);
         achievement3 = theory.createAchievement(2, achievement_category1, "Decay was too strong", `Perform a gamma reset.\n\nReward: multiply γ gain by 2.`, () => gammaResets > 0);
+        achievement5 = theory.createAchievement(4, achievement_category1, "Full house", `Max out γ₄, γ₅, and γ₆.\n\nReward: unlock more γ upgrades.`, () => gammaup_gammaDQ2Factor.level === gammaup_gammaDQ2Factor.maxLevel && gammaup_gammaDQ1Scaling.level === gammaup_gammaDQ1Scaling.maxLevel && gammaup_gammaGainExp.level === gammaup_gammaGainExp.maxLevel);
         achievement4 = theory.createAchievement(3, achievement_category1, "Big q family", `Let q₁, q₂, q₃ and q₄ all be above 1.`, () => q1 > 1 && q2 > 1 && q3 > 1 && q4 > 1);
     }
 
@@ -352,6 +370,7 @@ var updateAvailability = () => {
     gammaup_gammaDQ2Factor.isAvailable = stage === 1;
     gammaup_gammaDQ1Scaling.isAvailable = stage === 1;
     gammaup_gammaGainExp.isAvailable = stage === 1;
+    gammaup_gammaQDecay.isAvailable = achievement5.isUnlocked && stage === 1;
 };
 
 var getInternalState = () => JSON.stringify({
@@ -391,6 +410,8 @@ var tick = (elapsedTime, multiplier) => {
     if (dq1.level > 0) {
         // TODO: DE
         let old_q1 = q1, old_q2 = q2, old_q3 = q3, old_q4 = q4;
+
+        let q_decay = 100 + getGammaUpgGammaQDecay();
         let dq1 = getDQ1() * q2;
         let dq2 = getDQ2() * q3;
         let dq3 = getDQ3() * q4;
@@ -399,14 +420,14 @@ var tick = (elapsedTime, multiplier) => {
         let q2_dq2 = calculateXDxSoftcapped(q2, dq2 * dt);
         let q3_dq3 = calculateXDxSoftcapped(q3, dq3 * dt);
         let q4_dq4 = calculateXDxSoftcapped(q4, dq4 * dt);
-        q1 = q1_dq1[0] - q1 / 100 * dt;
-        q2 = q2_dq2[0] - q2 / 100 * dt;
-        q3 = q3_dq3[0] - q3 / 100 * dt;
-        q4 = q4_dq4[0] - q4 / 100 * dt;
-        dq1 = q1_dq1[1] - q1 / 100 * dt;
-        dq2 = q2_dq2[1] - q2 / 100 * dt;
-        dq3 = q3_dq3[1] - q3 / 100 * dt;
-        dq4 = q4_dq4[1] - q4 / 100 * dt;
+        q1 = q1_dq1[0] - q1 / q_decay * dt;
+        q2 = q2_dq2[0] - q2 / q_decay * dt;
+        q3 = q3_dq3[0] - q3 / q_decay * dt;
+        q4 = q4_dq4[0] - q4 / q_decay * dt;
+        dq1 = q1_dq1[1] - q1 / q_decay * dt;
+        dq2 = q2_dq2[1] - q2 / q_decay * dt;
+        dq3 = q3_dq3[1] - q3 / q_decay * dt;
+        dq4 = q4_dq4[1] - q4 / q_decay * dt;
         visual_dq1 = (q1 - old_q1) / dt;
         visual_dq2 = (q2 - old_q2) / dt;
         visual_dq3 = (q3 - old_q3) / dt;
@@ -575,7 +596,10 @@ var getSecondaryEquation = () => {
         if (achievement1.isUnlocked) {
             result += `(\\forall x)(x > 1 \\Rightarrow \\dot{x} = (x^{1.25} + \\dot{x})^{0.8} - x) \\\\`;
         }
-        result += `(\\forall q)(\\dot{q} = \\dot{q} - q / 100)`;
+
+        let decay = `100`;
+        if (gammaup_gammaQDecay.level > 0) decay = `(${decay} + \\gamma_7)`;
+        result += `(\\forall q)(\\dot{q} = \\dot{q} - q / ${decay})`;
     }
     else if (stage === 1) {
         theory.secondaryEquationHeight = 20;
@@ -836,7 +860,8 @@ var getGammaUpgGammaMult = (level = gammaup_gammaMult.level) => BigNumber.from(1
 var getGammaUpgGammaTimeMult = (level = gammaup_gammaTimeMult.level) => 1 + 1e-6 * level * t.pow(3);
 var getGammaUpgGammaDQ2Factor = (level = gammaup_gammaDQ2Factor.level) => BigNumber.from(1.1).pow(level);
 var getGammaUpgGammaDQ1Scaling = (level = gammaup_gammaDQ1Scaling.level) => 0.1 * level;
-var getGammaUpgGammaGainExp = (level = gammaup_gammaGainExp.level) => 0.04 * level;
+var getGammaUpgGammaGainExp = (level = gammaup_gammaGainExp.level) => BigNumber.from(0.04 * level);
+var getGammaUpgGammaQDecay = (level = gammaup_gammaQDecay.level) => BigNumber.from(level);
 
 var productionSoftcap = (x) => {
     if (x > 1) {
