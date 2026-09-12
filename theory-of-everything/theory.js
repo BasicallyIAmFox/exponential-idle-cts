@@ -13,6 +13,7 @@ var localDeltaTime = BigNumber.ZERO;
 var achievement1, achievement2, achievement3, achievement4;
 
 var stringTickspeed = (value) => `\\text{Tickspeed} : \\text{${value}} \\text{ / sec}`;
+var t = BigNumber.ZERO;
 var tickspeed;
 var tickspeedConsts = [
     11 / (2 ** 10),
@@ -38,7 +39,7 @@ var visual_dq1 = BigNumber.ZERO, visual_dq2 = BigNumber.ZERO, visual_dq3 = BigNu
 var gammaCurrency;
 var gammaCurrencyTotal = BigNumber.ZERO;
 var gammaResets = 0;
-var gammaup_gammaMult;
+var gammaup_gammaMult, gammaup_gammaTimeMult, gammaup_gammaGainExp;
 
 var autobuyerUnlock, autobuyEnabled;
 var autobuyerUnlockDQ1, autobuyerDQ1Configuration;
@@ -46,25 +47,27 @@ var autobuyerUnlockDQ2, autobuyerDQ2Configuration;
 var autobuyerConfigurationUpgradeMapper = { };
 var autobuyerConfiguration = {
     ["q1"]: {
-        autobuyCooldown: 2,
         autobuyTimer: 999,
         enabled: false,
     },
     ["q2"]: {
-        autobuyCooldown: 2,
         autobuyTimer: 999,
         enabled: false,
     },
     ["q3"]: {
-        autobuyCooldown: 2,
         autobuyTimer: 999,
         enabled: false,
     },
     ["q4"]: {
-        autobuyCooldown: 2,
         autobuyTimer: 999,
         enabled: false,
     },
+};
+var autobuyerConfigurationCooldown = {
+    ["q1"]: 2,
+    ["q2"]: 2,
+    ["q3"]: 2,
+    ["q4"]: 2,
 };
 
 var numberFormat = (value, decimals, negExpFlag=false) => {
@@ -164,13 +167,36 @@ var init = () => {
             return `\\gamma_1 = 2^{${level}}`;
         };
         let getInfo = (level) => {
-            if (level === 0) return `\\text{Add } \\gamma_1 \\text{ factor to } \\dot{\\rho} ; \\text{ } \\gamma_1 = 2`;
+            if (level === 0) return `\\text{Add } \\gamma_1 \\text{ factor to } \\dot{\\rho} ; \\text{ } \\gamma_1 = ${getGammaUpgGammaMult(0)}`;
 
             return `\\gamma_1 = ${getGammaUpgGammaMult(level)}`;
         };
-        gammaup_gammaMult = theory.createUpgrade(10, gammaCurrency, new ExponentialCost(1, Math.log2(1.8)));
+        gammaup_gammaMult = theory.createUpgrade(10, gammaCurrency, new ExponentialCost(1, Math.log2(1.85)));
         gammaup_gammaMult.getDescription = (_) => Utils.getMath(getDesc(gammaup_gammaMult.level));
         gammaup_gammaMult.getInfo = (amount) => Utils.getMathTo(getInfo(gammaup_gammaMult.level), getInfo(gammaup_gammaMult.level + amount));
+    }
+    {
+        let getDesc = (level) => {
+            if (level === 0) return `\\text{Add } \\gamma_2 \\text{ factor to } \\dot{\\rho} ; \\text{ } \\gamma_2 = (1000 \\times 1)^{(500 + 10 \\times 0 - t) / (1000 + 0)}`;
+
+            return `\\gamma_2 = 1 + (1000 \\times ${level})^{(500 + 10 \\times ${level - 1} - t) / (1000 + ${level - 1})}`;
+        };
+        let getInfo = (level) => {
+            if (level === 0) return `\\text{Add } \\gamma_2 \\text{ factor to } \\dot{\\rho} ; \\text{ } \\gamma_2 = ${getGammaUpgGammaTimeMult(0)}`;
+
+            return `\\gamma_2 = ${getGammaUpgGammaTimeMult(level)}`;
+        };
+        gammaup_gammaTimeMult = theory.createUpgrade(17, gammaCurrency, new ExponentialCost(1, Math.log2(1.4)));
+        gammaup_gammaTimeMult.getDescription = (_) => Utils.getMath(getDesc(gammaup_gammaTimeMult.level));
+        gammaup_gammaTimeMult.getInfo = (amount) => Utils.getMathTo(getInfo(gammaup_gammaTimeMult.level), getInfo(gammaup_gammaTimeMult.level + amount));
+    }
+    {
+        let getDesc = (level) => `\\gamma_6 = 0.05 \\times ${level}`;
+        let getInfo = (level) => `\\gamma_6 = ${getGammaUpgGammaGainExp(level)}`;
+        gammaup_gammaGainExp = theory.createUpgrade(18, gammaCurrency, new ExponentialCost(10, Math.log2(4)));
+        gammaup_gammaGainExp.getDescription = (_) => Utils.getMath(getDesc(gammaup_gammaGainExp.level));
+        gammaup_gammaGainExp.getInfo = (amount) => Utils.getMathTo(getInfo(gammaup_gammaGainExp.level), getInfo(gammaup_gammaGainExp.level + amount));
+        gammaup_gammaGainExp.maxLevel = 6;
     }
 
     {
@@ -198,8 +224,7 @@ var init = () => {
         };
         
         autobuyerDQ1Configuration = theory.createUpgrade(14, gammaCurrency, new FreeCost());
-        autobuyerDQ1Configuration.getDescription = (_) => `Configure $\\dot{q_1}$ auto-buyer settings`;
-        autobuyerDQ1Configuration.getInfo = (_) => `Configure $\\dot{q_1}$ auto-buyer settings`;
+        autobuyerDQ1Configuration.description = `Configure $\\dot{q_1}$ auto-buyer settings`;
         autobuyerDQ1Configuration.bought = (_) => {
             autobuyerDQ1Configuration.level = 0;
         };
@@ -215,8 +240,7 @@ var init = () => {
         };
         
         autobuyerDQ2Configuration = theory.createUpgrade(16, gammaCurrency, new FreeCost());
-        autobuyerDQ2Configuration.getDescription = (_) => `Configure $\\dot{q_2}$ auto-buyer settings`;
-        autobuyerDQ2Configuration.getInfo = (_) => `Configure $\\dot{q_2}$ auto-buyer settings`;
+        autobuyerDQ2Configuration.description = `Configure $\\dot{q_2}$ auto-buyer settings`;
         autobuyerDQ2Configuration.bought = (_) => {
             autobuyerDQ2Configuration.level = 0;
         };
@@ -231,7 +255,7 @@ var init = () => {
     }
 
     {
-        theory.createStoryChapter(0, "A Reminder from the Past", `You were, as they'd say, "chilling" at your very own house. You don't need to worry about anything at this point. The amount of money you got from that little equation from your olden days was enough to sustain you for the rest of your days.
+        theory.createStoryChapter(0, "A Reminder from the Past", `You were, as they'd say, "chilling" at your very own house. You don't need to worry about anything at this point. The amount of money you got from that little equation from your golden days was enough to sustain you for the rest of your days.
 
 One day, a group of students that you once graduated decided to have a party specifically for you. You shared some stories, some laughs, food, and drinks.
 
@@ -268,9 +292,12 @@ var updateAvailability = () => {
     dq4.isAvailable = stage === 0;
 
     gammaup_gammaMult.isAvailable = stage === 1;
+    gammaup_gammaTimeMult.isAvailable = stage === 1;
+    gammaup_gammaGainExp.isAvailable = stage === 1;
 };
 
 var getInternalState = () => JSON.stringify({
+    t: t.toBase64String(),
     maxRho: maxRho.toBase64String(),
     q1: q1.toBase64String(),
     q2: q2.toBase64String(),
@@ -278,13 +305,14 @@ var getInternalState = () => JSON.stringify({
     q4: q4.toBase64String(),
     gammaResets,
     gammaCurrencyTotal: gammaCurrencyTotal.toBase64String(),
-    autobuyerConfiguration
+    autobuyerConfiguration: autobuyerConfiguration,
 });
 
 var setInternalState = (stateStr) => {
     if (!stateStr) return;
-
+    
     let state = JSON.parse(stateStr);
+    if (state.t) t = BigNumber.fromBase64String(state.t);
     maxRho = BigNumber.fromBase64String(state.maxRho);
     q1 = BigNumber.fromBase64String(state.q1);
     q2 = BigNumber.fromBase64String(state.q2);
@@ -343,18 +371,20 @@ var tick = (elapsedTime, multiplier) => {
             const value = autobuyerConfiguration[key];
             if (!value.enabled) return;
 
-            value.autobuyTimer = Math.min(value.autobuyTimer - autobuyDt, value.autobuyCooldown);
+            const cooldown = autobuyerConfigurationCooldown[key];
+            value.autobuyTimer = Math.min(value.autobuyTimer - autobuyDt, cooldown);
             if (value.autobuyTimer <= 0) {
                 const upgrade = autobuyerConfigurationUpgradeMapper[key];
-                let prev_available = upgrade.isAvailable;
+                const prev_available = upgrade.isAvailable;
                 upgrade.isAvailable = true;
                 upgrade.buy(1);
                 upgrade.isAvailable = prev_available;
-
-                value.autobuyTimer = value.autobuyCooldown;
+                value.autobuyTimer = cooldown;
             }
         });
     }
+
+    t += dt;
 
     theory.invalidatePrimaryEquation();
     theory.invalidateSecondaryEquation();
@@ -376,10 +406,10 @@ var onGammaAdjustmentReset = () => {
         q3 *= 1.2;
     }
 
-    autobuyerConfiguration.q1.autobuyTimer = autobuyerConfiguration.q1.autobuyCooldown;
-    autobuyerConfiguration.q2.autobuyTimer = autobuyerConfiguration.q2.autobuyCooldown;
-    autobuyerConfiguration.q3.autobuyTimer = autobuyerConfiguration.q3.autobuyCooldown;
-    autobuyerConfiguration.q4.autobuyTimer = autobuyerConfiguration.q4.autobuyCooldown;
+    autobuyerConfiguration.q1.autobuyTimer = autobuyerConfigurationCooldown.q1;
+    autobuyerConfiguration.q2.autobuyTimer = autobuyerConfigurationCooldown.q2;
+    autobuyerConfiguration.q3.autobuyTimer = autobuyerConfigurationCooldown.q3;
+    autobuyerConfiguration.q4.autobuyTimer = autobuyerConfigurationCooldown.q4;
 
     gammaResets++;
     maxRho = BigNumber.ZERO;
@@ -443,17 +473,17 @@ var getPrimaryEquation = () => {
         result += `\\dot{\\rho} = ${visual_drho.toString(2)}`;
     }
     else if (stage === 0) {
-        let rhodot = `q_1`;
-        if (gammaup_gammaMult.level > 0) rhodot += ` \\gamma_1`;
+        let rhodot = ``;
+        if (gammaup_gammaMult.level > 0) rhodot += `\\gamma_1 `;
+        if (gammaup_gammaTimeMult.level > 0) rhodot += `\\gamma_2 `;
+        rhodot += `q_1`;
         result += `\\dot{\\rho} = ${rhodot}`;
     }
     else if (stage === 1) {
-        let base = `\\max (\\rho / 1000)^{0.2}`;
-
+        let base = `\\max (\\rho / 1000)^{0.2 + \\gamma_6}`;
         if (achievement3.isUnlocked) {
             base = `2 \\times ${base}`;
         }
-
         result += `d \\gamma = ${base}`;
     }
 
@@ -501,6 +531,7 @@ var getQuaternaryEntries = () => {
         entries.push(new QuaternaryEntry("q_4", q4.toString(4)));
     }
     else if (stage === 1) {
+        entries.push(new QuaternaryEntry("t", t.toString(4)));
         entries.push(new QuaternaryEntry("d\\gamma", getGammaPending()));
     }
 
@@ -615,20 +646,18 @@ var createGammaResetMenu = () => {
                 title: "Gamma Adjustment Reset",
                 content: ui.createStackLayout({
                     children: [
-                        ui.createBox({ heightRequest: 10, color: Color.fromRgba(0, 0, 0, 0) }),
                         ui.createLatexLabel({
+                            margin: new Thickness(0, 10, 0, 0),
                             horizontalTextAlignment: TextAlignment.CENTER,
                             text: `You are about to perform a Gamma Adjustment Reset.`,
                         }),
-
-                        ui.createBox({ heightRequest: 15, color: Color.fromRgba(0, 0, 0, 0) }),
                         ui.createLatexLabel({
+                            margin: new Thickness(0, 15, 0, 0),
                             horizontalTextAlignment: TextAlignment.CENTER,
                             text: `Do you want to continue?`,
                         }),
-
-                        ui.createBox({ heightRequest: 10, color: Color.fromRgba(0, 0, 0, 0) }),
                         ui.createGrid({
+                            margin: new Thickness(0, 10, 0, 0),
                             children: [
                                 yesButton,
                                 noButton,
@@ -718,7 +747,7 @@ var getDQ3 = (level = dq3.level) => Utils.getStepwisePowerSum(level, 2, 10, 0) /
 var getDQ4 = (level = dq4.level) => Utils.getStepwisePowerSum(level, 2, 10, 0) / 10;
 
 var getGammaPending = (rho = maxRho) => {
-    let result = rho >= 1000 ? (rho / 1000).pow(0.2) : BigNumber.ZERO;
+    let result = rho >= 1000 ? (rho / 1000).pow(0.2 + getGammaUpgGammaGainExp()) : BigNumber.ZERO;
 
     if (achievement3.isUnlocked) {
         result *= 2;
@@ -727,6 +756,8 @@ var getGammaPending = (rho = maxRho) => {
     return result;
 };
 var getGammaUpgGammaMult = (level = gammaup_gammaMult.level) => BigNumber.TWO.pow(level);
+var getGammaUpgGammaTimeMult = (level = gammaup_gammaTimeMult.level) => 1 + (BigNumber.THOUSAND * level).pow((500 + 10 * (level - 1) - t) / (1000 + (level - 1)));
+var getGammaUpgGammaGainExp = (level = gammaup_gammaGainExp.level) => 0.05 * level;
 
 var productionSoftcap = (x) => {
     if (x > 1) {
