@@ -157,7 +157,7 @@ var init = () => {
             if (gammaup_gammaTickspeed.level > 0) result += ` + \\gamma_3`;
             return result;
         };
-        let getInfo = (_) => `n_t=${getTn()}`;
+        let getInfo = (level) => `n_t=${getTn(level)}`;
         tickspeed = theory.createPermanentUpgrade(3, currency, new ExponentialCost(2, Math.log2(80)));
         tickspeed.getDescription = (_) => Utils.getMath(getDesc(tickspeed.level));
         tickspeed.getInfo = (amount) => Utils.getMathTo(getInfo(tickspeed.level), getInfo(tickspeed.level + amount));
@@ -522,7 +522,7 @@ var getSecondaryEquation = () => {
         theory.secondaryEquationHeight = 20;
         theory.secondaryEquationScale = 1;
 
-        result += `\\dot{t} = n_t / 2^{n_t - 1} \\\\`;
+        result += `\\dot{t} = (11 - n_t) / 2^{10 - n_t} \\\\`;
         result += `n_t = ${tickspeed.level}`;
         if (gammaup_gammaTickspeed.level > 0) result += ` + \\gamma_3`;
         result += `\\\\`;
@@ -773,8 +773,8 @@ var getPublicationMultiplier = (tau) => BigNumber.ONE;
 var getPublicationMultiplierFormula = (symbol) => `\\text{There is no resolution.}`;
 var get2DGraphValue = () => currency.value.sign * (BigNumber.ONE + currency.value.abs()).log10().toNumber();
 
-var getTn = () => tickspeed.level + gammaup_gammaTickspeed.level;
-var getTickspeed = (level = getTn()) => BigNumber.from(tickspeedConsts[level]);
+var getTn = (tickspeedLevel) => tickspeedLevel + gammaup_gammaTickspeed.level;
+var getTickspeed = (level = getTn(tickspeed.level)) => BigNumber.from(tickspeedConsts[level]);
 var getDQ1 = (level = dq1.level) => Utils.getStepwisePowerSum(level, 2, 10, 0) / 10;
 var getDQ2 = (level = dq2.level) => Utils.getStepwisePowerSum(level, 2, 10, 0) / 10;
 var getDQ3 = (level = dq3.level) => Utils.getStepwisePowerSum(level, 2, 10, 0) / 10;
