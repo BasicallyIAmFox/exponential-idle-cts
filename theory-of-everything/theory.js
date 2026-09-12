@@ -165,9 +165,9 @@ var init = () => {
     
     {
         let getDesc = (level) => {
-            if (level === 0) return `\\text{Add } \\gamma_1 \\text{ factor to } \\dot{\\rho} ; \\text{ } \\gamma_1 = 2^{1}`;
+            if (level === 0) return `\\text{Add } \\gamma_1 \\text{ factor to } \\dot{\\rho} ; \\text{ } \\gamma_1 = 1.8^{1}`;
 
-            return `\\gamma_1 = 2^{${level}}`;
+            return `\\gamma_1 = 1.8^{${level}}`;
         };
         let getInfo = (level) => {
             if (level === 0) return `\\text{Add } \\gamma_1 \\text{ factor to } \\dot{\\rho} ; \\text{ } \\gamma_1 = ${getGammaUpgGammaMult(0)}`;
@@ -180,16 +180,16 @@ var init = () => {
     }
     {
         let getDesc = (level) => {
-            if (level === 0) return `\\text{Add } \\gamma_2 \\text{ factor to } \\dot{\\rho} ; \\text{ } \\gamma_2 = (1000)^{(500 - t) / 1000}`;
+            if (level === 0) return `\\text{Add } \\gamma_2 \\text{ factor to } \\dot{\\rho} ; \\text{ } \\gamma_2 = 1 + 1 \\sqrt{t / 1.2}`;
 
-            return `\\gamma_2 = 1 + {${1000 * level}}^{(${500 + 10 * (level - 1)} - t) / ${1000 + (level - 1)}}`;
+            return `\\gamma_2 = 1 + ${level} \\sqrt{t / 1.2}`;
         };
         let getInfo = (level) => {
             if (level === 0) return `\\text{Add } \\gamma_2 \\text{ factor to } \\dot{\\rho} ; \\text{ } \\gamma_2 = ${getGammaUpgGammaTimeMult(0)}`;
 
             return `\\gamma_2 = ${getGammaUpgGammaTimeMult(level)}`;
         };
-        gammaup_gammaTimeMult = theory.createUpgrade(17, gammaCurrency, new ExponentialCost(1, Math.log2(1.6)));
+        gammaup_gammaTimeMult = theory.createUpgrade(17, gammaCurrency, new ExponentialCost(1, Math.log2(1.7)));
         gammaup_gammaTimeMult.getDescription = (_) => Utils.getMath(getDesc(gammaup_gammaTimeMult.level));
         gammaup_gammaTimeMult.getInfo = (amount) => Utils.getMathTo(getInfo(gammaup_gammaTimeMult.level), getInfo(gammaup_gammaTimeMult.level + amount));
     }
@@ -506,7 +506,7 @@ var getPrimaryEquation = () => {
         result += `\\dot{\\rho} = ${rhodot}`;
     }
     else if (stage === 1) {
-        let base = `(\\bar{\\rho})^{0.16 + \\gamma_6}`;
+        let base = `(\\bar{\\rho})^{0.2 + \\gamma_6}`;
         if (achievement3.isUnlocked) {
             base = `2 \\times ${base}`;
         }
@@ -568,8 +568,9 @@ var getQuaternaryEntries = () => {
         entries.push(new QuaternaryEntry("q_4", q4.toString(4)));
     }
     else if (stage === 1) {
-        entries.push(new QuaternaryEntry("t", t.toString(4)));
+        entries.push(new QuaternaryEntry("t", t.toString(3)));
         entries.push(new QuaternaryEntry("d\\gamma", getGammaPending()));
+        entries.push(new QuaternaryEntry("\\bar{\\rho}", maxRho / 1000));
     }
 
     return entries;
@@ -785,7 +786,7 @@ var getDQ3 = (level = dq3.level) => Utils.getStepwisePowerSum(level, 2, 10, 0) /
 var getDQ4 = (level = dq4.level) => Utils.getStepwisePowerSum(level, 2, 10, 0) / 10;
 
 var getGammaPending = (rho = maxRho) => {
-    let result = rho >= 1000 ? (rho / 1000).pow(0.16 + getGammaUpgGammaGainExp()) : BigNumber.ZERO;
+    let result = rho >= 1000 ? (rho / 1000).pow(0.2 + getGammaUpgGammaGainExp()) : BigNumber.ZERO;
 
     if (achievement3.isUnlocked) {
         result *= 2;
@@ -793,8 +794,8 @@ var getGammaPending = (rho = maxRho) => {
 
     return result;
 };
-var getGammaUpgGammaMult = (level = gammaup_gammaMult.level) => BigNumber.TWO.pow(level);
-var getGammaUpgGammaTimeMult = (level = gammaup_gammaTimeMult.level) => 1 + (BigNumber.THOUSAND * level).pow((500 + 10 * (level - 1) - t) / (1000 + (level - 1)));
+var getGammaUpgGammaMult = (level = gammaup_gammaMult.level) => BigNumber.from(1.8).pow(level);
+var getGammaUpgGammaTimeMult = (level = gammaup_gammaTimeMult.level) => BigNumber.ONE + level * (t / 1.2).sqrt();
 var getGammaUpgGammaGainExp = (level = gammaup_gammaGainExp.level) => 0.04 * level;
 
 var productionSoftcap = (x) => {
