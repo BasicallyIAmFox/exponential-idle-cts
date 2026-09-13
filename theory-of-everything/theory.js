@@ -661,7 +661,7 @@ var getQuaternaryEntries = () => {
     else if (stage === 1) {
         entries.push(new QuaternaryEntry("t", t.toString(3)));
         entries.push(new QuaternaryEntry("d\\gamma", getGammaPending()));
-        entries.push(new QuaternaryEntry("\\frac{d\\gamma}{t}", (getGammaPending() / t).toString(3)));
+        entries.push(new QuaternaryEntry("\\frac{d\\gamma}{t}", (getGammaPending() / t.max(0.1)).toString(3)));
         entries.push(new QuaternaryEntry("\\bar{\\rho}", maxRho));
     }
 
