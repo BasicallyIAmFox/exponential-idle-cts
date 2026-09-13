@@ -205,7 +205,7 @@ var init = () => {
     }
     {
         let getDesc = (level) => {
-            let base = `\\gamma_2 = 1 + {${level}} \\times t^{3} / 10^{6}`;
+            let base = `\\gamma_2 = 1 + ${getGammaUpgGammaTimeMult_StepwiseScaling(level)} \\times t^{3} / 10^{6}`;
             if (level === 0) base = `\\text{Add } \\gamma_2 \\text{ factor to } \\dot{\\rho} \\\\ ${base}`;
             return base;
         };
@@ -885,7 +885,8 @@ var getGammaPending = (rho = maxRho) => {
     return result;
 };
 var getGammaUpgGammaMult = (level = gammaup_gammaMult.level) => BigNumber.from(1.8).pow(level);
-var getGammaUpgGammaTimeMult = (level = gammaup_gammaTimeMult.level) => 1 + 1e-6 * Utils.getStepwisePowerSum(level, 2, 10, 0) * t.pow(3);
+var getGammaUpgGammaTimeMult_StepwiseScaling = (level) => Utils.getStepwisePowerSum(level, 2, 10, 0);
+var getGammaUpgGammaTimeMult = (level = gammaup_gammaTimeMult.level) => 1 + 1e-6 * getGammaUpgGammaTimeMult_StepwiseScaling(level) * t.pow(3);
 var getGammaUpgGammaDQ2Factor = (level = gammaup_gammaDQ2Factor.level) => BigNumber.from(1.1).pow(level);
 var getGammaUpgGammaDQ1Scaling = (level = gammaup_gammaDQ1Scaling.level) => 0.1 * level;
 var getGammaUpgGammaGainExp = (level = gammaup_gammaGainExp.level) => BigNumber.from(0.04 * level);
