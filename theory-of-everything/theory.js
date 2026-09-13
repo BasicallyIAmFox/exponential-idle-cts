@@ -31,17 +31,37 @@ var tickspeedConsts = [
 
 var currency;
 var maxRho = BigNumber.ZERO;
+
+// q variables
+const qBaseDecay = 100;
+const qBaseDecayStr = `100`;
 var q1 = BigNumber.ZERO, q2 = BigNumber.ZERO, q3 = BigNumber.ONE, q4 = BigNumber.ONE;
 var dq1, dq2, dq3, dq4;
 var visual_drho = BigNumber.ZERO;
 var visual_dq1 = BigNumber.ZERO, visual_dq2 = BigNumber.ZERO, visual_dq3 = BigNumber.ZERO, visual_dq4 = BigNumber.ZERO;
+var getQDecay = () => qBaseDecay + getGammaUpgGammaQDecay();
+var getQDecayLatex = () => {
+    let result = qBaseDecayStr;
+    if (gammaup_gammaQDecay.level > 0) result = `(${result} + \\gamma_7)`;
+    return result;
+}
 
+// Gamma variables
+const gammaGainBaseScaling = 0.2;
+const gammaGainBaseScalingStr = `0.2`;
+const gammaGainRhoThreshold = 1000;
+const gammaGainRhoThresholdStr = `1000`;
 var gammaCurrency;
 var gammaCurrencyTotal = BigNumber.ZERO;
 var gammaResets = 0;
 var gammaup_gammaMult, gammaup_gammaTimeMult, gammaup_gammaTickspeed, gammaup_gammaDQ2Factor, gammaup_gammaDQ1Scaling, gammaup_gammaGainExp;
 var gammaup_gammaQDecay;
+var getGammaGainScaling = () => gammaGainBaseScaling + getGammaUpgGammaGainExp();
+var getGammaGainScalingLatex = () => `${gammaGainBaseScalingStr} + \\gamma_6`;
+var getGammaGainRhoThreshold = () => gammaGainRhoThreshold;
+var getGammaGainRhoThresholdLatex = () => gammaGainRhoThresholdStr;
 
+// Auto-buyer variables
 var autobuyerUnlock, autobuyEnabled;
 var autobuyerUnlockDQ1, autobuyerDQ1Configuration;
 var autobuyerUnlockDQ2, autobuyerDQ2Configuration;
@@ -117,8 +137,8 @@ var init = () => {
     gammaCurrency = theory.createCurrency(`γ`, `\\gamma`);
 
     {
-        let getDesc = (level) => "\\dot{q}_1=" + getDQ1(level).toString(level > 10 && gammaup_gammaDQ1Scaling.level > 0 ? 2 : 1) + "\\times q_2";
-        let getInfo = (level) => "\\dot{q}_1=" + (getDQ1(level) * q2).toString(4);
+        let getDesc = (level) => `\\dot{q}_1 = ${getDQ1(level).toString(level > 9 && gammaup_gammaDQ1Scaling.level > 0 ? 2 : 1)} \\times q_2`;
+        let getInfo = (level) => `\\dot{q}_1 = ${(getDQ1(level) * q2).toString(4)}`;
         dq1 = theory.createUpgrade(0, currency, new FirstFreeCost(new ExponentialCost(0.1, Math.log2(2e2) / 2)));
         dq1.getDescription = (_) => Utils.getMath(getDesc(dq1.level));
         dq1.getInfo = (amount) => Utils.getMathTo(getInfo(dq1.level), getInfo(dq1.level + amount));
@@ -126,27 +146,27 @@ var init = () => {
     }
     {
         let getDesc = (level) => {
-            let result = "\\dot{q}_2=" + getDQ2(level).toString(1) + "\\times q_3";
-            if (gammaup_gammaDQ2Factor.level > 0) result += ` y_4`;
-            return result;
+            let result = `\\dot{q}_2 = ${getDQ2(level).toString(1)}`;
+            if (gammaup_gammaDQ2Factor.level > 0) result += ` \\gamma_4`;
+            return `${result} \\times q_3`;
         };
-        let getInfo = (level) => "\\dot{q}_2=" + (getDQ2(level) * q3).toString(4);
+        let getInfo = (level) => `\\dot{q}_2 = ${(getDQ2(level) * getGammaUpgGammaDQ2Factor() * q3).toString(4)}`;
         dq2 = theory.createUpgrade(1, currency, new FirstFreeCost(new ExponentialCost(1, Math.log2(2e4) / 2)));
         dq2.getDescription = (_) => Utils.getMath(getDesc(dq2.level));
         dq2.getInfo = (amount) => Utils.getMathTo(getInfo(dq2.level), getInfo(dq2.level + amount));
         autobuyerConfigurationUpgradeMapper["q2"] = dq2;
     }
     {
-        let getDesc = (level) => "\\dot{q}_3=" + getDQ3(level).toString(1) + "\\times q_4";
-        let getInfo = (level) => "\\dot{q}_3=" + (getDQ3(level) * q4).toString(4);
+        let getDesc = (level) => `\\dot{q}_3 = ${getDQ3(level).toString(1)} \\times q_4`;
+        let getInfo = (level) => `\\dot{q}_3 = ${(getDQ3(level) * q4).toString(4)}`;
         dq3 = theory.createUpgrade(2, currency, new ExponentialCost(10000, Math.log2(2e6) / 2));
         dq3.getDescription = (_) => Utils.getMath(getDesc(dq3.level));
         dq3.getInfo = (amount) => Utils.getMathTo(getInfo(dq3.level), getInfo(dq3.level + amount));
         autobuyerConfigurationUpgradeMapper["q3"] = dq3;
     }
     {
-        let getDesc = (level) => "\\dot{q}_4=" + getDQ4(level).toString(1);
-        let getInfo = (level) => "\\dot{q}_4=" + getDQ4(level).toString(4);
+        let getDesc = (level) => `\\dot{q}_4 = ${getDQ4(level).toString(1)}`;
+        let getInfo = (level) => `\\dot{q}_4 = ${getDQ4(level).toString(4)}`;
         dq4 = theory.createUpgrade(3, currency, new ExponentialCost(8e20, Math.log2(2e8) / 2));
         dq4.getDescription = (_) => Utils.getMath(getDesc(dq4.level));
         dq4.getInfo = (amount) => Utils.getMathTo(getInfo(dq4.level), getInfo(dq4.level + amount));
@@ -161,7 +181,7 @@ var init = () => {
             if (gammaup_gammaTickspeed.level > 0) result += ` + \\gamma_3`;
             return result;
         };
-        let getInfo = (level) => `n_t=${getTn(level)}`;
+        let getInfo = (level) => `n_t = ${getTn(level)}`;
         tickspeed = theory.createPermanentUpgrade(3, currency, new ExponentialCost(2, Math.log2(80)));
         tickspeed.getDescription = (_) => Utils.getMath(getDesc(tickspeed.level));
         tickspeed.getInfo = (amount) => Utils.getMathTo(getInfo(tickspeed.level), getInfo(tickspeed.level + amount));
@@ -170,14 +190,14 @@ var init = () => {
     
     {
         let getDesc = (level) => {
-            if (level === 0) return `\\text{Add } \\gamma_1 \\text{ factor to } \\dot{\\rho} ; \\text{ } \\gamma_1 = 1.8^{0}`;
-
-            return `\\gamma_1 = 1.8^{${level}}`;
+            let base = `\\gamma_1 = 1.8^{${level}}`;
+            if (level === 0) base = `\\text{Add } \\gamma_1 \\text{ factor to } \\dot{\\rho} \\\\ ${base}`;
+            return base;
         };
         let getInfo = (level) => {
-            if (level === 0) return `\\text{Add } \\gamma_1 \\text{ factor to } \\dot{\\rho} ; \\text{ } \\gamma_1 = ${getGammaUpgGammaMult(0)}`;
-
-            return `\\gamma_1 = ${getGammaUpgGammaMult(level)}`;
+            let base = `\\gamma_1 = ${getGammaUpgGammaMult(level)}`;
+            if (level === 0) base = `\\text{Add } \\gamma_1 \\text{ factor to } \\dot{\\rho} \\\\ ${base}`;
+            return base;
         };
         gammaup_gammaMult = theory.createUpgrade(10, gammaCurrency, new ExponentialCost(1, Math.log2(1.85)));
         gammaup_gammaMult.getDescription = (_) => Utils.getMath(getDesc(gammaup_gammaMult.level));
@@ -185,14 +205,14 @@ var init = () => {
     }
     {
         let getDesc = (level) => {
-            if (level === 0) return `\\text{Add } \\gamma_2 \\text{ factor to } \\dot{\\rho} ; \\text{ } \\gamma_2 = 1 + {0} \\times t^{3} / 10^{6}`;
-
-            return `\\gamma_2 = 1 + {${level}} \\times t^{3} / 10^{6}`;
+            let base = `\\gamma_2 = 1 + {${level}} \\times t^{3} / 10^{6}`;
+            if (level === 0) base = `\\text{Add } \\gamma_2 \\text{ factor to } \\dot{\\rho} \\\\ ${base}`;
+            return base;
         };
         let getInfo = (level) => {
-            if (level === 0) return `\\text{Add } \\gamma_2 \\text{ factor to } \\dot{\\rho} ; \\text{ } \\gamma_2 = ${getGammaUpgGammaTimeMult(0)}`;
-
-            return `\\gamma_2 = ${getGammaUpgGammaTimeMult(level)}`;
+            let base = `\\gamma_2 = ${getGammaUpgGammaTimeMult(level)}`;
+            if (level === 0) base = `\\text{Add } \\gamma_2 \\text{ factor to } \\dot{\\rho} \\\\ ${base}`;
+            return base;
         };
         gammaup_gammaTimeMult = theory.createUpgrade(17, gammaCurrency, new ExponentialCost(1, Math.log2(1.7)));
         gammaup_gammaTimeMult.getDescription = (_) => Utils.getMath(getDesc(gammaup_gammaTimeMult.level));
@@ -200,14 +220,14 @@ var init = () => {
     }
     {
         let getDesc = (level) => {
-            if (level === 0) return `\\text{Add } \\gamma_3 \\text{ term to } n_t ; \\text{ } \\gamma_3 = 0`;
-
-            return `\\gamma_3 = ${level}`;
+            let base = `\\gamma_3 = ${level}`;
+            if (level === 0) base = `\\text{Add } \\gamma_3 \\text{ term to } n_t \\\\ ${base}`;
+            return base;
         };
         let getInfo = (level) => {
-            if (level === 0) return `\\text{Add } \\gamma_3 \\text{ term to } n_t ; \\text{ } \\gamma_3 = 0`;
-
-            return `\\gamma_3 = ${level}`;
+            let base = `\\gamma_3 = ${level}`;
+            if (level === 0) base = `\\text{Add } \\gamma_3 \\text{ term to } n_t \\\\ ${base}`;
+            return base;
         };
         gammaup_gammaTickspeed = theory.createUpgrade(19, gammaCurrency, new ExponentialCost(3, Math.log2(14.5)));
         gammaup_gammaTickspeed.getDescription = (_) => Utils.getMath(getDesc(gammaup_gammaTickspeed.level));
@@ -216,14 +236,14 @@ var init = () => {
     }
     {
         let getDesc = (level) => {
-            if (level === 0) return `\\text{Add } \\gamma_4 \\text{ factor to } \\dot{q_2} ; \\text{ } \\gamma_4 = 1.1^{0}`;
-
-            return `\\gamma_4 = 1.1^{${level}}`;
+            let base = `\\gamma_4 = 1.1^{${level}}`;
+            if (level === 0) base = `\\text{Add } \\gamma_4 \\text{ factor to } \\dot{q_2} \\\\ ${base}`;
+            return base;
         };
         let getInfo = (level) => {
-            if (level === 0) return `\\text{Add } \\gamma_4 \\text{ factor to } \\dot{q_2} ; \\text{ } \\gamma_4 = ${getGammaUpgGammaDQ2Factor(0)}`;
-
-            return `\\gamma_4 = ${getGammaUpgGammaDQ2Factor(level)}`;
+            let base = `\\gamma_4 = ${getGammaUpgGammaDQ2Factor(level)}`;
+            if (level === 0) base = `\\text{Add } \\gamma_4 \\text{ factor to } \\dot{q_2} \\\\ ${base}`;
+            return base;
         };
         gammaup_gammaDQ2Factor = theory.createUpgrade(20, gammaCurrency, new ExponentialCost(70, Math.log2(5)));
         gammaup_gammaDQ2Factor.getDescription = (_) => Utils.getMath(getDesc(gammaup_gammaDQ2Factor.level));
@@ -232,14 +252,14 @@ var init = () => {
     }
     {
         let getDesc = (level) => {
-            if (level === 0) return `\\text{Add } \\gamma_5 \\text{ term to } \\dot{q_1} \\text{ scaling} ; \\text{ } \\gamma_5 = 0.1 \\times 0`;
-
-            return `\\gamma_5 = 0.1 \\times ${level}`;
+            let base = `\\gamma_5 = 0.1 \\times ${level}`;
+            if (level === 0) base = `\\text{Add } \\gamma_5 \\text{ term to } \\dot{q_1} \\text{ scaling} \\\\ ${base}`;
+            return base;
         };
         let getInfo = (level) => {
-            if (level === 0) return `\\text{Add } \\gamma_5 \\text{ term to } \\dot{q_1} \\text{ scaling} ; \\text{ } \\gamma_5 = 0.1`;
-
-            return `\\gamma_5 = ${BigNumber.from(getGammaUpgGammaDQ1Scaling(level))}`;
+            let base = `\\gamma_5 = ${BigNumber.from(getGammaUpgGammaDQ1Scaling(level))}`;
+            if (level === 0) base = `\\text{Add } \\gamma_5 \\text{ term to } \\dot{q_1} \\text{ scaling} \\\\ ${base}`;
+            return base;
         };
         gammaup_gammaDQ1Scaling = theory.createUpgrade(21, gammaCurrency, new ExponentialCost(100, Math.log2(7)));
         gammaup_gammaDQ1Scaling.getDescription = (_) => Utils.getMath(getDesc(gammaup_gammaDQ1Scaling.level));
@@ -296,7 +316,8 @@ var init = () => {
         };
         
         autobuyerDQ1Configuration = theory.createUpgrade(14, gammaCurrency, new FreeCost());
-        autobuyerDQ1Configuration.description = `Configure $\\dot{q_1}$ auto-buyer settings`;
+        autobuyerDQ1Configuration.description = `Configure $\\dot{q_1}$ auto-buyer settings (WIP)`;
+        autobuyerDQ1Configuration.info = `Configure $\\dot{q_1}$ auto-buyer settings (WIP)`;
         autobuyerDQ1Configuration.bought = (_) => {
             autobuyerDQ1Configuration.level = 0;
         };
@@ -312,7 +333,8 @@ var init = () => {
         };
         
         autobuyerDQ2Configuration = theory.createUpgrade(16, gammaCurrency, new FreeCost());
-        autobuyerDQ2Configuration.description = `Configure $\\dot{q_2}$ auto-buyer settings`;
+        autobuyerDQ2Configuration.description = `Configure $\\dot{q_2}$ auto-buyer settings (WIP)`;
+        autobuyerDQ2Configuration.info = `Configure $\\dot{q_2}$ auto-buyer settings (WIP)`;
         autobuyerDQ2Configuration.bought = (_) => {
             autobuyerDQ2Configuration.level = 0;
         };
@@ -397,7 +419,7 @@ var setInternalState = (stateStr) => {
     q4 = BigNumber.fromBase64String(state.q4);
     gammaResets = state.gammaResets;
     gammaCurrencyTotal = BigNumber.fromBase64String(state.gammaCurrencyTotal);
-    if (state.autobuyerConfiguration) autobuyerConfiguration = state.autobuyerConfiguration;
+    autobuyerConfiguration = state.autobuyerConfiguration;
 };
 
 var tick = (elapsedTime, multiplier) => {
@@ -411,23 +433,19 @@ var tick = (elapsedTime, multiplier) => {
         // TODO: DE
         let old_q1 = q1, old_q2 = q2, old_q3 = q3, old_q4 = q4;
 
-        let q_decay = 100 + getGammaUpgGammaQDecay();
+        let q_decay = getQDecay();
         let dq1 = getDQ1() * q2;
-        let dq2 = getDQ2() * q3;
+        let dq2 = getDQ2() * getGammaUpgGammaDQ2Factor() * q3;
         let dq3 = getDQ3() * q4;
         let dq4 = getDQ4();
         let q1_dq1 = calculateXDxSoftcapped(q1, dq1 * dt);
         let q2_dq2 = calculateXDxSoftcapped(q2, dq2 * dt);
         let q3_dq3 = calculateXDxSoftcapped(q3, dq3 * dt);
         let q4_dq4 = calculateXDxSoftcapped(q4, dq4 * dt);
-        q1 = q1_dq1[0] - q1 / q_decay * dt;
-        q2 = q2_dq2[0] - q2 / q_decay * dt;
-        q3 = q3_dq3[0] - q3 / q_decay * dt;
-        q4 = q4_dq4[0] - q4 / q_decay * dt;
-        dq1 = q1_dq1[1] - q1 / q_decay * dt;
-        dq2 = q2_dq2[1] - q2 / q_decay * dt;
-        dq3 = q3_dq3[1] - q3 / q_decay * dt;
-        dq4 = q4_dq4[1] - q4 / q_decay * dt;
+        q1 = (q1_dq1[0] - q1 / q_decay * dt).max(BigNumber.ZERO).min(q_decay * dq1 * q2);
+        q2 = (q2_dq2[0] - q2 / q_decay * dt).max(BigNumber.ZERO).min(q_decay * dq2 * q3);
+        q3 = (q3_dq3[0] - q3 / q_decay * dt).max(BigNumber.ZERO).min(q_decay * dq3 * q4);
+        q4 = (q4_dq4[0] - q4 / q_decay * dt).max(BigNumber.ZERO).min(q_decay * dq4);
         visual_dq1 = (q1 - old_q1) / dt;
         visual_dq2 = (q2 - old_q2) / dt;
         visual_dq3 = (q3 - old_q3) / dt;
@@ -504,6 +522,10 @@ var onGammaAdjustmentReset = () => {
 var postPublish = () => {
 };
 
+//
+// UI
+//
+
 let getImageSize = (width) => {
     if (width >= 1080) return 48;
     if (width >= 720) return 36;
@@ -551,6 +573,16 @@ let createImageBtn = (params, callback, isAvailable, image) => {
     return frame;
 };
 
+const gammaResetImage = game.settings.theme == Theme.LIGHT
+    ? ImageSource.fromUri('https://raw.githubusercontent.com/BasicallyIAmFox/exponential-idle-cts/refs/heads/main/theory-of-everything/GammaResetLight.png')
+    : ImageSource.fromUri('https://raw.githubusercontent.com/BasicallyIAmFox/exponential-idle-cts/refs/heads/main/theory-of-everything/GammaResetDark.png');
+const gammaResetMenuFrame = createImageBtn({
+    row: 0, column: 0,
+    horizontalOptions: LayoutOptions.START,
+    verticalOptions: LayoutOptions.START,
+    isVisible: () => gammaResets > 0 || maxRho >= 1000,
+}, () => createGammaResetMenu().show(), () => true, gammaResetImage);
+
 var getPrimaryEquation = () => {
     let result = `\\begin{array}{}`;
 
@@ -565,7 +597,7 @@ var getPrimaryEquation = () => {
         result += `\\dot{\\rho} = ${rhodot}`;
     }
     else if (stage === 1) {
-        let base = `(\\frac{\\bar{\\rho}}{1000})^{0.2 + \\gamma_6}`;
+        let base = `(\\frac{\\bar{\\rho}}{${getGammaGainRhoThresholdLatex()}})^{${getGammaGainScalingLatex()}}`;
         if (achievement3.isUnlocked) {
             base = `2 \\times ${base}`;
         }
@@ -597,9 +629,7 @@ var getSecondaryEquation = () => {
             result += `(\\forall x)(x > 1 \\Rightarrow \\dot{x} = (x^{1.25} + \\dot{x})^{0.8} - x) \\\\`;
         }
 
-        let decay = `100`;
-        if (gammaup_gammaQDecay.level > 0) decay = `(${decay} + \\gamma_7)`;
-        result += `(\\forall q)(\\dot{q} = \\dot{q} - q / ${decay})`;
+        result += `(\\forall q)(\\dot{q} = \\dot{q} - q / ${getQDecayLatex()})`;
     }
     else if (stage === 1) {
         theory.secondaryEquationHeight = 20;
@@ -697,16 +727,6 @@ var getCurrencyBarDelegate = () => {
         }),
     });
 };
-
-const gammaResetImage = game.settings.theme == Theme.LIGHT
-    ? ImageSource.fromUri('https://raw.githubusercontent.com/BasicallyIAmFox/exponential-idle-cts/refs/heads/main/theory-of-everything/GammaResetLight.png')
-    : ImageSource.fromUri('https://raw.githubusercontent.com/BasicallyIAmFox/exponential-idle-cts/refs/heads/main/theory-of-everything/GammaResetDark.png');
-const gammaResetMenuFrame = createImageBtn({
-    row: 0, column: 0,
-    horizontalOptions: LayoutOptions.START,
-    verticalOptions: LayoutOptions.START,
-    isVisible: () => gammaResets > 0 || maxRho >= 1000,
-}, () => createGammaResetMenu().show(), () => true, gammaResetImage);
 
 var getEquationOverlay = () => {
     return ui.createGrid({
@@ -818,10 +838,12 @@ var createGammaResetMenu = () => {
 };
 
 var canGoToPreviousStage = () => stage > -1;
+
 var goToPreviousStage = () => {
     stage--;
     updateAvailability();
 };
+
 var canGoToNextStage = () => {
     if (stage < 1 && gammaResets > 0) {
         return true;
@@ -829,6 +851,7 @@ var canGoToNextStage = () => {
         return stage < 0;
     }
 };
+
 var goToNextStage = () => {
     stage++;
     updateAvailability();
@@ -840,15 +863,20 @@ var getPublicationMultiplier = (tau) => BigNumber.ONE;
 var getPublicationMultiplierFormula = (symbol) => `\\text{There is no resolution.}`;
 var get2DGraphValue = () => currency.value.sign * (BigNumber.ONE + currency.value.abs()).log10().toNumber();
 
+//
+// Variable effects and value getters
+//
+
 var getTn = (tickspeedLevel) => tickspeedLevel + gammaup_gammaTickspeed.level;
 var getTickspeed = (level = getTn(tickspeed.level)) => BigNumber.from(tickspeedConsts[level]);
-var getDQ1 = (level = dq1.level) => Utils.getStepwisePowerSum(level, 2 + getGammaUpgGammaDQ1Scaling(), 10, 0) / 10;
-var getDQ2 = (level = dq2.level) => Utils.getStepwisePowerSum(level, 2, 10, 0) / 10 * getGammaUpgGammaDQ2Factor();
-var getDQ3 = (level = dq3.level) => Utils.getStepwisePowerSum(level, 2, 10, 0) / 10;
-var getDQ4 = (level = dq4.level) => Utils.getStepwisePowerSum(level, 2, 10, 0) / 10;
+var getDQ1 = (level = dq1.level) => Utils.getStepwisePowerSum(level, 2 + getGammaUpgGammaDQ1Scaling(), 9, 0) / 10;
+var getDQ2 = (level = dq2.level) => Utils.getStepwisePowerSum(level, 2, 9, 0) / 10;
+var getDQ3 = (level = dq3.level) => Utils.getStepwisePowerSum(level, 2, 9, 0) / 10;
+var getDQ4 = (level = dq4.level) => Utils.getStepwisePowerSum(level, 2, 9, 0) / 10;
 
 var getGammaPending = (rho = maxRho) => {
-    let result = rho >= 1000 ? (rho / 1000).pow(0.2 + getGammaUpgGammaGainExp()) : BigNumber.ZERO;
+    const threshold = getGammaGainRhoThreshold();
+    let result = rho >= threshold ? (rho / threshold).pow(getGammaGainScaling()) : BigNumber.ZERO;
 
     if (achievement3.isUnlocked) {
         result *= 2;
@@ -857,11 +885,15 @@ var getGammaPending = (rho = maxRho) => {
     return result;
 };
 var getGammaUpgGammaMult = (level = gammaup_gammaMult.level) => BigNumber.from(1.8).pow(level);
-var getGammaUpgGammaTimeMult = (level = gammaup_gammaTimeMult.level) => 1 + 1e-6 * level * t.pow(3);
+var getGammaUpgGammaTimeMult = (level = gammaup_gammaTimeMult.level) => 1 + 1e-6 * Utils.getStepwisePowerSum(level, 2, 10, 0) * t.pow(3);
 var getGammaUpgGammaDQ2Factor = (level = gammaup_gammaDQ2Factor.level) => BigNumber.from(1.1).pow(level);
 var getGammaUpgGammaDQ1Scaling = (level = gammaup_gammaDQ1Scaling.level) => 0.1 * level;
 var getGammaUpgGammaGainExp = (level = gammaup_gammaGainExp.level) => BigNumber.from(0.04 * level);
 var getGammaUpgGammaQDecay = (level = gammaup_gammaQDecay.level) => BigNumber.from(level);
+
+//
+// Math
+//
 
 var productionSoftcap = (x) => {
     if (x > 1) {
