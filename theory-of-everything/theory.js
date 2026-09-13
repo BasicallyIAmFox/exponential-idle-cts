@@ -597,7 +597,7 @@ var getPrimaryEquation = () => {
         result += `\\dot{\\rho} = ${rhodot}`;
     }
     else if (stage === 1) {
-        let base = `(\\frac{\\bar{\\rho}}{${getGammaGainRhoThresholdLatex()}})^{${getGammaGainScalingLatex()}}`;
+        let base = `\\left( \\frac{\\bar{\\rho}}{${getGammaGainRhoThresholdLatex()}} \\right)^{${getGammaGainScalingLatex()}}`;
         if (achievement3.isUnlocked) {
             base = `2 \\times ${base}`;
         }
