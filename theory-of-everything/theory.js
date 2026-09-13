@@ -26,7 +26,6 @@ var tickspeedConsts = [
     4 / (2 ** 3),
     3 / (2 ** 2),
     2 / (2 ** 1),
-    1 / (2 ** 0),
 ];
 
 var currency;
@@ -205,7 +204,7 @@ var init = () => {
     }
     {
         let getDesc = (level) => {
-            let base = `\\gamma_2 = 1 + ${getGammaUpgGammaTimeMult_StepwiseScaling(level)} \\times t^{3} / 10^{6}`;
+            let base = `\\gamma_2 = 1 + ${getGammaUpgGammaTimeMult_StepwiseScaling(level).toString(0)} \\times t^{3} / 10^{6}`;
             if (level === 0) base = `\\text{Add } \\gamma_2 \\text{ factor to } \\dot{\\rho} \\\\ ${base}`;
             return base;
         };
