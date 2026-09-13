@@ -429,7 +429,7 @@ var tick = (elapsedTime, multiplier) => {
     localDeltaTime = dt;
 
     visual_dq1 = visual_dq2 = visual_dq3 = visual_dq4 = BigNumber.ZERO;
-    if (dq1.level > 0) {
+    if (dq1.level > 0 && dq2.level > 0) {
         // TODO: DE
         let old_q1 = q1, old_q2 = q2, old_q3 = q3, old_q4 = q4;
 
