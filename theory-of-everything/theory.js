@@ -442,10 +442,10 @@ var tick = (elapsedTime, multiplier) => {
         let q2_dq2 = calculateXDxSoftcapped(q2, dq2 * dt);
         let q3_dq3 = calculateXDxSoftcapped(q3, dq3 * dt);
         let q4_dq4 = calculateXDxSoftcapped(q4, dq4 * dt);
-        q1 = (q1_dq1[0] - q1 / q_decay * dt).max(BigNumber.ZERO).min(q_decay * dq1 * q2);
-        q2 = (q2_dq2[0] - q2 / q_decay * dt).max(BigNumber.ZERO).min(q_decay * dq2 * q3);
-        q3 = (q3_dq3[0] - q3 / q_decay * dt).max(BigNumber.ZERO).min(q_decay * dq3 * q4);
-        q4 = (q4_dq4[0] - q4 / q_decay * dt).max(BigNumber.ZERO).min(q_decay * dq4);
+        q1 = (q1_dq1[0] - q1 / q_decay * dt).max(BigNumber.ZERO);
+        q2 = (q2_dq2[0] - q2 / q_decay * dt).max(BigNumber.ZERO);
+        q3 = (q3_dq3[0] - q3 / q_decay * dt).max(BigNumber.ZERO);
+        q4 = (q4_dq4[0] - q4 / q_decay * dt).max(BigNumber.ZERO);
         visual_dq1 = (q1 - old_q1) / dt;
         visual_dq2 = (q2 - old_q2) / dt;
         visual_dq3 = (q3 - old_q3) / dt;
