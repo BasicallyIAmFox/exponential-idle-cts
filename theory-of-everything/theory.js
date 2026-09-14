@@ -835,7 +835,7 @@ var createGammaResetMenu = () => {
             rowDefinitions: ["*", "*"],
             columnDefinitions: ["*", "*"],
             children: [
-                ui.createLatexLabel({
+                /*ui.createLatexLabel({
                     row: 0, column: 0,
                     horizontalTextAlignment: TextAlignment.CENTER,
                     text: `$\\rho$`,
@@ -844,7 +844,7 @@ var createGammaResetMenu = () => {
                     row: 1, column: 0,
                     horizontalTextAlignment: TextAlignment.CENTER,
                     text: () => `$${BigNumber.ZERO}$`,
-                }),
+                }),*/
 
                 ui.createLatexLabel({
                     row: 0, column: 1,
