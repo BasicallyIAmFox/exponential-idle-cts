@@ -836,6 +836,17 @@ var createGammaResetMenu = () => {
             columnDefinitions: ["*"],
             children: [
                 ui.createLatexLabel({
+                    row: 0, column: 1,
+                    horizontalTextAlignment: TextAlignment.CENTER,
+                    text: `$\\rho$`,
+                }),
+                ui.createLatexLabel({
+                    row: 1, column: 1,
+                    horizontalTextAlignment: TextAlignment.CENTER,
+                    text: () => `$${BigNumber.ZERO}$`,
+                }),
+
+                ui.createLatexLabel({
                     row: 0, column: 0,
                     horizontalTextAlignment: TextAlignment.CENTER,
                     text: `$\\gamma$`,
@@ -849,7 +860,7 @@ var createGammaResetMenu = () => {
         }),
         ui.createLatexLabel({
             horizontalTextAlignment: TextAlignment.CENTER,
-            text: `$\\rho$, $q_1$, $q_2$, $q_3$, $q_4$ and respective upgrades are reset.`,
+            text: `$q_1$, $q_2$, $q_3$, $q_4$ and respective upgrades are reset.`,
         }),
         resetButton,
     ];
@@ -942,12 +953,12 @@ var calculateXDxSoftcapped = (x, dx, initialThreshold = BigNumber.ONE, apply = [
     if (x < initialThreshold) {
         let new_x = x + dx;
         if (new_x >= initialThreshold) {
-            new_x = apply[0](new_x - initialThreshold) + initialThreshold;
+            new_x = apply[0](new_x / initialThreshold) * initialThreshold;
         }
         dx = new_x - x;
         x = new_x;
     } else {
-        const new_x = apply[0](apply[1](x) + dx);
+        const new_x = apply[0](apply[1](x / initialThreshold) + dx / initialThreshold) * initialThreshold;
         dx = new_x - x;
         x = new_x;
     }
