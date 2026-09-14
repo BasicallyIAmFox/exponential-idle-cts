@@ -62,28 +62,21 @@ var getGammaGainRhoThresholdLatex = () => gammaGainRhoThresholdStr;
 
 // Auto-buyer variables
 var autobuyerUnlock, autobuyEnabled;
-var autobuyerUnlockDQ1, autobuyerDQ1Configuration;
-var autobuyerUnlockDQ2, autobuyerDQ2Configuration;
+var autobuyerUnlockDQ1, autobuyerDQ1Rate, autobuyerDQ1Bulk;
+var autobuyerUnlockDQ2, autobuyerDQ2Rate, autobuyerDQ2Bulk;
+var autobuyerUnlockDQ3, autobuyerDQ3Rate, autobuyerDQ3Bulk;
 var autobuyerConfigurationUpgradeMapper = { };
 var autobuyerConfiguration = {
-    ["q1"]: {
-        autobuyTimer: 999,
-    },
-    ["q2"]: {
-        autobuyTimer: 999,
-    },
-    ["q3"]: {
-        autobuyTimer: 999,
-    },
-    ["q4"]: {
-        autobuyTimer: 999,
-    },
+    ["q1"]: { autobuyTimer: 999, },
+    ["q2"]: { autobuyTimer: 999, },
+    ["q3"]: { autobuyTimer: 999, },
+    ["q4"]: { autobuyTimer: 999, },
 };
 var autobuyerConfigurationCooldown = {
-    ["q1"]: 2,
-    ["q2"]: 2,
-    ["q3"]: 2,
-    ["q4"]: 2,
+    ["q1"]: () => [2 - 0.1 * autobuyerDQ1Rate.level, autobuyerDQ1Bulk.level + 1],
+    ["q2"]: () => [2 - 0.1 * autobuyerDQ2Rate.level, autobuyerDQ2Bulk.level + 1],
+    ["q3"]: () => [2 - 0.1 * autobuyerDQ3Rate.level, autobuyerDQ3Bulk.level + 1],
+    ["q4"]: () => [2, 1],
 };
 
 var numberFormat = (value, decimals, negExpFlag=false) => {
@@ -314,12 +307,18 @@ var init = () => {
             updateAvailability();
         };
         
-        autobuyerDQ1Configuration = theory.createUpgrade(14, gammaCurrency, new FreeCost());
-        autobuyerDQ1Configuration.description = `Configure $\\dot{q_1}$ auto-buyer settings (WIP)`;
-        autobuyerDQ1Configuration.info = `Configure $\\dot{q_1}$ auto-buyer settings (WIP)`;
-        autobuyerDQ1Configuration.bought = (_) => {
-            autobuyerDQ1Configuration.level = 0;
-        };
+        let getRateDesc = (level) => `\\dot{q_1} \\text{ Automation/s} = 2 - 0.1 \\times ${level}`;
+        let getRateInfo = (level) => `\\dot{q_1} \\text{ Automation/s} = ${BigNumber.from(2 - 0.1 * level)}`;
+        autobuyerDQ1Rate = theory.createUpgrade(14, gammaCurrency, new ExponentialCost(20, 1.42));
+        autobuyerDQ1Rate.getDescription = (_) => Utils.getMath(getRateDesc(autobuyerDQ1Rate.level));
+        autobuyerDQ1Rate.getInfo = (amount) => Utils.getMathTo(getRateInfo(autobuyerDQ1Rate.level), getRateInfo(autobuyerDQ1Rate.level + amount));
+        autobuyerDQ1Rate.maxLevel = 19;
+        
+        let getBulkDesc = (level) => `\\dot{q_1} \\text{ Buy/Automation} = ${level + 1}`;
+        let getBulkInfo = (level) => `\\dot{q_1} \\text{ Buy/Automation} = ${level + 1}`;
+        autobuyerDQ1Bulk = theory.createUpgrade(26, gammaCurrency, new ExponentialCost(25, 2));
+        autobuyerDQ1Bulk.getDescription = (_) => Utils.getMath(getBulkDesc(autobuyerDQ1Bulk.level));
+        autobuyerDQ1Bulk.getInfo = (amount) => Utils.getMathTo(getBulkInfo(autobuyerDQ1Bulk.level), getBulkInfo(autobuyerDQ1Bulk.level + amount));
     }
     {
         autobuyerUnlockDQ2 = theory.createUpgrade(15, gammaCurrency, new ConstantCost(30));
@@ -331,12 +330,41 @@ var init = () => {
             updateAvailability();
         };
         
-        autobuyerDQ2Configuration = theory.createUpgrade(16, gammaCurrency, new FreeCost());
-        autobuyerDQ2Configuration.description = `Configure $\\dot{q_2}$ auto-buyer settings (WIP)`;
-        autobuyerDQ2Configuration.info = `Configure $\\dot{q_2}$ auto-buyer settings (WIP)`;
-        autobuyerDQ2Configuration.bought = (_) => {
-            autobuyerDQ2Configuration.level = 0;
+        let getRateDesc = (level) => `\\dot{q_2} \\text{ Automation/s} = 2 - 0.1 \\times ${level}`;
+        let getRateInfo = (level) => `\\dot{q_2} \\text{ Automation/s} = ${BigNumber.from(2 - 0.1 * level)}`;
+        autobuyerDQ2Rate = theory.createUpgrade(16, gammaCurrency, new ExponentialCost(30, 1.41));
+        autobuyerDQ2Rate.getDescription = (_) => Utils.getMath(getRateDesc(autobuyerDQ2Rate.level));
+        autobuyerDQ2Rate.getInfo = (amount) => Utils.getMathTo(getRateInfo(autobuyerDQ2Rate.level), getRateInfo(autobuyerDQ2Rate.level + amount));
+        autobuyerDQ2Rate.maxLevel = 19;
+        
+        let getBulkDesc = (level) => `\\dot{q_2} \\text{ Buy/Automation} = ${level + 1}`;
+        let getBulkInfo = (level) => `\\dot{q_2} \\text{ Buy/Automation} = ${level + 1}`;
+        autobuyerDQ2Bulk = theory.createUpgrade(27, gammaCurrency, new ExponentialCost(37.5, 2.5));
+        autobuyerDQ2Bulk.getDescription = (_) => Utils.getMath(getBulkDesc(autobuyerDQ2Bulk.level));
+        autobuyerDQ2Bulk.getInfo = (amount) => Utils.getMathTo(getBulkInfo(autobuyerDQ2Bulk.level), getBulkInfo(autobuyerDQ2Bulk.level + amount));
+    }
+    {
+        autobuyerUnlockDQ3 = theory.createUpgrade(23, gammaCurrency, new ConstantCost(2000));
+        autobuyerUnlockDQ3.description = `Unlock $\\dot{q_3}$ auto-buyer`;
+        autobuyerUnlockDQ3.info = `Allows to automatically purchase $\\dot{q_3}$`;
+        autobuyerUnlockDQ3.maxLevel = 1;
+        autobuyerUnlockDQ3.bought = (_) => {
+            autobuyerConfiguration.q3.enabled = true;
+            updateAvailability();
         };
+        
+        let getRateDesc = (level) => `\\dot{q_3} \\text{ Automation/s} = 2 - 0.1 \\times ${level}`;
+        let getRateInfo = (level) => `\\dot{q_3} \\text{ Automation/s} = ${BigNumber.from(2 - 0.1 * level)}`;
+        autobuyerDQ3Rate = theory.createUpgrade(24, gammaCurrency, new ExponentialCost(800, 1.18));
+        autobuyerDQ3Rate.getDescription = (_) => Utils.getMath(getRateDesc(autobuyerDQ3Rate.level));
+        autobuyerDQ3Rate.getInfo = (amount) => Utils.getMathTo(getRateInfo(autobuyerDQ3Rate.level), getRateInfo(autobuyerDQ3Rate.level + amount));
+        autobuyerDQ3Rate.maxLevel = 19;
+        
+        let getBulkDesc = (level) => `\\dot{q_3} \\text{ Buy/Automation} = ${level + 1}`;
+        let getBulkInfo = (level) => `\\dot{q_3} \\text{ Buy/Automation} = ${level + 1}`;
+        autobuyerDQ3Bulk = theory.createUpgrade(25, gammaCurrency, new ExponentialCost(1000, 3));
+        autobuyerDQ3Bulk.getDescription = (_) => Utils.getMath(getBulkDesc(autobuyerDQ3Bulk.level));
+        autobuyerDQ3Bulk.getInfo = (amount) => Utils.getMathTo(getBulkInfo(autobuyerDQ3Bulk.level), getBulkInfo(autobuyerDQ3Bulk.level + amount));
     }
 
     let achievement_category1 = theory.createAchievementCategory(0, "Progression");
@@ -376,9 +404,11 @@ var updateAvailability = () => {
     autobuyerUnlock.isAvailable = gammaResets > 0 && stage === -1 && autobuyerUnlock.level < 1;
     autobuyEnabled.isAvailable = gammaResets > 0 && stage === -1 && autobuyerUnlock.level > 0;
     autobuyerUnlockDQ1.isAvailable = autobuyEnabled.isAvailable && autobuyerUnlockDQ1.level < 1;
-    autobuyerDQ1Configuration.isAvailable = autobuyEnabled.isAvailable && autobuyerUnlockDQ1.level > 0;
+    autobuyerDQ1Rate.isAvailable = autobuyerDQ1Bulk.isAvailable = autobuyEnabled.isAvailable && autobuyerUnlockDQ1.level > 0;
     autobuyerUnlockDQ2.isAvailable = autobuyEnabled.isAvailable && autobuyerUnlockDQ2.level < 1;
-    autobuyerDQ2Configuration.isAvailable = autobuyEnabled.isAvailable && autobuyerUnlockDQ2.level > 0;
+    autobuyerDQ2Rate.isAvailable = autobuyerDQ2Bulk.isAvailable = autobuyEnabled.isAvailable && autobuyerUnlockDQ2.level > 0;
+    autobuyerUnlockDQ3.isAvailable = autobuyEnabled.isAvailable && autobuyerUnlockDQ3.level < 1;
+    autobuyerDQ3Rate.isAvailable = autobuyerDQ3Bulk.isAvailable = autobuyEnabled.isAvailable && autobuyerUnlockDQ3.level > 0;
 
     dq1.isAvailable = stage === 0;
     dq2.isAvailable = stage === 0;
@@ -463,26 +493,24 @@ var tick = (elapsedTime, multiplier) => {
     }
 
     autobuyEnabled.isAutoBuyable = false;
-    autobuyerDQ1Configuration.isAutoBuyable = false;
-    autobuyerDQ2Configuration.isAutoBuyable = false;
     if (autobuyEnabled.level < 1) {
-        const autobuyDt = dt;
+        const autobuyDt = elapsedTime * multiplier;
 
         Object.keys(autobuyerConfiguration).forEach(key => {
             const value = autobuyerConfiguration[key];
             if (!value.enabled) return;
 
-            const cooldown = autobuyerConfigurationCooldown[key];
-            value.autobuyTimer = Math.min(value.autobuyTimer - autobuyDt, cooldown);
+            const cooldown_bulk = autobuyerConfigurationCooldown[key]();
+            value.autobuyTimer = Math.min(value.autobuyTimer - autobuyDt, cooldown_bulk[0]);
             if (value.autobuyTimer <= 0) {
                 const upgrade = autobuyerConfigurationUpgradeMapper[key];
                 const prev_available = upgrade.isAvailable;
                 upgrade.isAvailable = true;
                 if (upgrade.isAutoBuyable) {
-                    upgrade.buy(1);
+                    upgrade.buy(Math.min(cooldown_bulk[1], upgrade.cost.getMax(upgrade.level, upgrade.currency.value)));
                 }
                 upgrade.isAvailable = prev_available;
-                value.autobuyTimer = cooldown;
+                value.autobuyTimer = cooldown_bulk[0];
             }
         });
     }
@@ -507,10 +535,10 @@ var onGammaAdjustmentReset = () => {
         q3 *= 1.2;
     }
 
-    autobuyerConfiguration.q1.autobuyTimer = autobuyerConfigurationCooldown.q1;
-    autobuyerConfiguration.q2.autobuyTimer = autobuyerConfigurationCooldown.q2;
-    autobuyerConfiguration.q3.autobuyTimer = autobuyerConfigurationCooldown.q3;
-    autobuyerConfiguration.q4.autobuyTimer = autobuyerConfigurationCooldown.q4;
+    autobuyerConfiguration.q1.autobuyTimer = autobuyerConfigurationCooldown.q1()[0];
+    autobuyerConfiguration.q2.autobuyTimer = autobuyerConfigurationCooldown.q2()[0];
+    autobuyerConfiguration.q3.autobuyTimer = autobuyerConfigurationCooldown.q3()[0];
+    autobuyerConfiguration.q4.autobuyTimer = autobuyerConfigurationCooldown.q4()[0];
 
     t = BigNumber.ZERO;
     gammaResets++;
