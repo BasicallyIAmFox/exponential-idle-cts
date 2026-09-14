@@ -833,26 +833,26 @@ var createGammaResetMenu = () => {
         }),
         ui.createGrid({
             rowDefinitions: ["*", "*"],
-            columnDefinitions: ["*"],
+            columnDefinitions: ["*", "*"],
             children: [
                 ui.createLatexLabel({
-                    row: 0, column: 1,
+                    row: 0, column: 0,
                     horizontalTextAlignment: TextAlignment.CENTER,
                     text: `$\\rho$`,
                 }),
                 ui.createLatexLabel({
-                    row: 1, column: 1,
+                    row: 1, column: 0,
                     horizontalTextAlignment: TextAlignment.CENTER,
                     text: () => `$${BigNumber.ZERO}$`,
                 }),
 
                 ui.createLatexLabel({
-                    row: 0, column: 0,
+                    row: 0, column: 1,
                     horizontalTextAlignment: TextAlignment.CENTER,
                     text: `$\\gamma$`,
                 }),
                 ui.createLatexLabel({
-                    row: 1, column: 0,
+                    row: 1, column: 1,
                     horizontalTextAlignment: TextAlignment.CENTER,
                     text: () => `$${gammaCurrency.value}$ + $${getGammaPending(maxRho)}$`,
                 }),
