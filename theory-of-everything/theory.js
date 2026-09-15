@@ -44,6 +44,9 @@ var getQDecay = () => {
     if (conjectureActiveData.id === 0) {
         result /= conjectures[0].getPenalty(conjectureActiveData.difficulty);
     }
+    if (conjecturesHighestCompletedDifficulties[0] > 0) {
+        result *= conjectures[0].getReward(conjecturesHighestCompletedDifficulties[0]);
+    }
 
     return result;
 };
@@ -82,7 +85,10 @@ var conjectures = [
     {
         maxDifficulty: 3,
         name: () => `Conjecture 1`,
-        goal: (difficulty) => BigNumber.ZERO,
+        goal: (difficulty) => {
+            if (difficulty === 1) return BigNumber.from(1e8);
+            return BigNumber.from(1e100);
+        },
         penalty: (difficulty) => `$q \\text{ decay} \\times ${conjectures[0].getPenaltyStr(difficulty)}$`,
         reward: (difficulty) => `$q \\text{ decay} \\div 1.2^{${difficulty}}$`,
 
@@ -102,21 +108,21 @@ var conjectures = [
     {
         maxDifficulty: 3,
         name: () => `Conjecture 2`,
-        goal: (difficulty) => BigNumber.ZERO,
+        goal: (difficulty) => BigNumber.from(1e100),
         penalty: (difficulty) => ``,
         reward: (difficulty) => ``,
     },
     {
         maxDifficulty: 3,
         name: () => `Conjecture 3`,
-        goal: (difficulty) => BigNumber.ZERO,
+        goal: (difficulty) => BigNumber.from(1e100),
         penalty: (difficulty) => ``,
         reward: (difficulty) => ``,
     },
     {
         maxDifficulty: 3,
         name: () => `Conjecture 4`,
-        goal: (difficulty) => BigNumber.ZERO,
+        goal: (difficulty) => BigNumber.from(200000),
         penalty: (difficulty) => {
             if (difficulty === 1) {
                 return `$q_4$ is disabled. Softcap is stronger.`;
@@ -126,7 +132,7 @@ var conjectures = [
                 return `$q_4$, $q_3$, $q_2$ are disabled. Softcap is stronger.`;
             }
         },
-        reward: (difficulty) => ``,
+        reward: (difficulty) => `Softcap is +$${conjectures[3].getRewardStr(difficulty)}$`,
 
         onStart: (difficulty) => {
             if (difficulty >= 1) { dq4.maxLevel = 0; }
@@ -138,8 +144,36 @@ var conjectures = [
             dq3.maxLevel = 2147483647;
             dq2.maxLevel = 2147483647;
         },
+        
+        getReward(difficulty) {
+            return BigNumber.from(0.01 * difficulty);
+        },
+        getRewardStr(difficulty) {
+            return `${this.getReward(difficulty)}`;
+        },
     },
 ];
+var enterConjecture = (id, difficulty) => {
+    if (conjectureActiveData.id !== -1 && conjectures[conjectureActiveData.id].onEnd) {
+        conjectures[conjectureActiveData.id].onEnd(conjectureActiveData.difficulty);
+    }
+
+    onGammaAdjustmentReset(true);
+    conjectureActiveData.id = id;
+    conjectureActiveData.difficulty = difficulty;
+
+    if (conjectures[conjectureActiveData.id].onStart) {
+        conjectures[conjectureActiveData.id].onStart(conjectureActiveData.difficulty);
+    }
+};
+var exitConjecture = () => {
+    if (conjectureActiveData.id !== -1 && conjectures[conjectureActiveData.id].onEnd) {
+        conjectures[conjectureActiveData.id].onEnd(conjectureActiveData.difficulty);
+    }
+    
+    conjectureActiveData.id = -1;
+    conjectureActiveData.difficulty = -1;
+};
 
 // Auto-buyer variables
 var autobuyerUnlock, autobuyEnabled;
@@ -630,6 +664,11 @@ var tick = (elapsedTime, multiplier) => {
         });
     }
 
+    if (conjectureActiveData.id !== -1 && currency.value >= conjectures[conjectureActiveData.id].goal(conjectureActiveData.difficulty)) {
+        conjecturesHighestCompletedDifficulties[conjectureActiveData.id] = conjectureActiveData.difficulty;
+        exitConjecture();
+    }
+
     theory.invalidatePrimaryEquation();
     theory.invalidateSecondaryEquation();
     theory.invalidateTertiaryEquation();
@@ -677,17 +716,10 @@ var postPublish = () => {
 var canResetStage = () => gammaResets < 1 && maxRho < 1000 || conjectureActiveData.id > -1;
 var getResetStageMessage = () => `You can perform a reset when your ${currency.symbol} is stuck.`;
 var resetStage = () => {
-    let oldConjectureActiveDataId = {
-        id: conjectureActiveData.id,
-        difficulty: conjectureActiveData.difficulty,
-    };
-
-    onGammaAdjustmentReset(true);
-
-    conjectureActiveData.id = oldConjectureActiveDataId.id;
-    conjectureActiveData.difficulty = oldConjectureActiveDataId.difficulty;
-    if (conjectureActiveData.id !== -1 && conjectures[conjectures.id].onStart) {
-        conjectures[conjectures.id].onStart(conjectureActiveData.difficulty);
+    if (conjectureActiveData.id > -1) {
+        enterConjecture(conjectureActiveData.id, conjectureActiveData.difficulty);
+    } else {
+        onGammaAdjustmentReset(true);
     }
 };
 
@@ -795,14 +827,10 @@ var getSecondaryEquation = () => {
         theory.secondaryEquationScale = 1;
 
         if (achievement1.isUnlocked) {
-            let softcap = `0.8`;
-            let softcapReciprocal = `1.25`;
-            if (conjectureActiveData.id === 3) {
-                softcap = `0.4`;
-                softcapReciprocal = `2.5`;
-            }
+            let softcap = BigNumber.from(0.8 + conjectures[3].getReward(conjecturesHighestCompletedDifficulties[3]));
+            if (conjectureActiveData.id === 3) softcap /= 2;
 
-            result += `(\\forall x) \\left( x > 1 \\Rightarrow \\dot{x} = \\left( x^{${softcapReciprocal}} + \\dot{x} \\right)^{${softcap}} - x \\right) \\\\`;
+            result += `(\\forall x) \\left( x > 1 \\Rightarrow \\dot{x} = \\left( x^{${1 / softcap}} + \\dot{x} \\right)^{${softcap}} - x \\right) \\\\`;
         }
 
         let qDecayStr = `\\frac{`;
@@ -922,9 +950,7 @@ var getCurrencyBarDelegate = () => {
         onTouched: (e) => {
             if (e.type.isReleased()) {
                 if (conjectureActiveData.id > -1) {
-                    if (conjectures[conjectureActiveData.id].onEnd) {
-                        conjectures[conjectureActiveData.id].onEnd(conjectureActiveData.difficulty);
-                    }
+                    exitConjecture();
                     onGammaAdjustmentReset(true);
                 } else {
                     createConjecturesMenu().show();
@@ -946,18 +972,40 @@ var getCurrencyBarDelegate = () => {
 
 var getEquationOverlay = () => {
     return ui.createGrid({
-        inputTransparent: true,
-        cascadeInputTransparent: false,
+        columnSpacing: 0,
         children: [
             ui.createGrid({
-                row: 0, column: 0,
-                margin: new Thickness(4),
-                horizontalOptions: LayoutOptions.START,
-                verticalOptions: LayoutOptions.END,
                 inputTransparent: true,
                 cascadeInputTransparent: false,
                 children: [
-                    gammaResetMenuFrame,
+                    ui.createGrid({
+                        row: 0, column: 0,
+                        margin: new Thickness(4),
+                        horizontalOptions: LayoutOptions.START,
+                        verticalOptions: LayoutOptions.END,
+                        inputTransparent: true,
+                        cascadeInputTransparent: false,
+                        children: [
+                            gammaResetMenuFrame,
+                        ],
+                    }),
+                ],
+            }),
+            ui.createGrid({
+                columnDefinitions: ["1*", "3*", "1*"],
+                columnSpacing: 0,
+                children: [
+                    ui.createFrame({
+                        column: 1,
+                        horizontalOptions: LayoutOptions.FILL_AND_EXPAND,
+                        verticalOptions: LayoutOptions.START,
+                        children: [
+                            ui.createProgressBar({
+                                progress: () => Math.min(((1 + currency.value).log10() / conjectures[conjectureActiveData.id].goal(conjectureActiveData.difficulty).log10()).toNumber(), 1),
+                            }),
+                        ],
+                        isVisible: () => conjectureActiveData.id > -1,
+                    }),
                 ],
             }),
         ],
@@ -1050,6 +1098,11 @@ var createGammaResetMenu = () => {
             horizontalTextAlignment: TextAlignment.CENTER,
             text: `$q_1$, $q_2$, $q_3$, $q_4$ and respective upgrades are reset.`,
         }),
+        ui.createLatexLabel({
+            horizontalTextAlignment: TextAlignment.CENTER,
+            text: `You will also leave your current Conjecture.`,
+            isVisible: () => conjectureActiveData.id > -1
+        }),
         resetButton,
     ];
 
@@ -1073,7 +1126,6 @@ var createConjecturesMenu = () => {
         const nextDifficulty = Math.min(completedDifficulty + 1, conj.maxDifficulty);
 
         let mainButton = ui.createFrame({
-            column: 1,
             heightRequest: 70,
             content: ui.createStackLayout({
                 children: [
@@ -1153,13 +1205,8 @@ var createConjecturesMenu = () => {
                     yesButton.onClicked = () => {
                         popup.hide();
                         _conjecturesMenu.hide();
-                        onGammaAdjustmentReset(true);
 
-                        conjectureActiveData.id = id;
-                        conjectureActiveData.difficulty = Math.min(completedDifficulty + 1, conj.maxDifficulty);
-                        if (conjectures[id].onStart) {
-                            conjectures[id].onStart(conjectureActiveData.difficulty);
-                        }
+                        enterConjecture(id, Math.min(completedDifficulty + 1, conj.maxDifficulty))
 
                         stage = 0;
                         updateAvailability();
@@ -1226,6 +1273,8 @@ var getDQ3 = (level = dq3.level) => Utils.getStepwisePowerSum(level, 2, 9, 0) / 
 var getDQ4 = (level = dq4.level) => Utils.getStepwisePowerSum(level, 2, 9, 0) / 10;
 
 var getGammaPending = (rho = maxRho) => {
+    if (conjectureActiveData.id > -1) return BigNumber.ZERO;
+
     const threshold = getGammaGainRhoThreshold();
     let result = rho >= threshold ? (rho / threshold).pow(getGammaGainScaling()) : BigNumber.ZERO;
 
@@ -1249,7 +1298,7 @@ var getGammaUpgGammaDQ1Scaling = (level = gammaup_gammaDQ1Scaling.level) => 0.1 
 
 var productionSoftcap = (x) => {
     if (x > 1) {
-        x = x.pow(0.8);
+        x = x.pow(0.8 + conjectures[3].getReward(conjecturesHighestCompletedDifficulties[3]));
     }
     if (conjectureActiveData.id === 3 && x > 1) {
         x = x.pow(0.5);
@@ -1259,7 +1308,7 @@ var productionSoftcap = (x) => {
 
 var productionSoftcapInverse = (x) => {
     if (x > 1) {
-        x = x.pow(1 / 0.8);
+        x = x.pow(1 / (0.8 + conjectures[3].getReward(conjecturesHighestCompletedDifficulties[3])));
     }
     if (conjectureActiveData.id === 3 && x > 1) {
         x = x.pow(1 / 0.5);
