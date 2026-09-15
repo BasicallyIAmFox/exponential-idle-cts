@@ -664,8 +664,8 @@ var onGammaAdjustmentReset = (soft) => {
     maxRho = BigNumber.ZERO;
     theory.clearGraph();
 
-    if (conjectureActiveData.id !== -1 && conjectures[conjectures.id].onEnd) {
-        conjectures[conjectures.id].onEnd(conjectureActiveData.difficulty);
+    if (conjectureActiveData.id !== -1 && conjectures[conjectureActiveData.id].onEnd) {
+        conjectures[conjectureActiveData.id].onEnd(conjectureActiveData.difficulty);
     }
     conjectureActiveData.id = -1;
     conjectureActiveData.difficulty = -1;
