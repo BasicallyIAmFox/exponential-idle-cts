@@ -1001,7 +1001,7 @@ var getEquationOverlay = () => {
                         verticalOptions: LayoutOptions.START,
                         children: [
                             ui.createProgressBar({
-                                progress: () => Math.min(((1 + currency.value).log10() / conjectures[conjectureActiveData.id].goal(conjectureActiveData.difficulty).log10()).toNumber(), 1),
+                                progress: () => conjectureActiveData.id > -1 ? Math.min(((1 + currency.value).log10() / conjectures[conjectureActiveData.id].goal(conjectureActiveData.difficulty).log10()).toNumber(), 1) : 0,
                             }),
                         ],
                         isVisible: () => conjectureActiveData.id > -1,
