@@ -109,16 +109,53 @@ var conjectures = [
     {
         maxDifficulty: 3,
         name: () => `Conjecture 2`,
-        goal: (difficulty) => BigNumber.from(1e100),
-        penalty: (difficulty) => ``,
-        reward: (difficulty) => ``,
+        goal: (difficulty) => {
+            if (difficulty === 1) return BigNumber.from(1e7);
+            if (difficulty === 2) return BigNumber.from(1e9);
+            if (difficulty === 3) return BigNumber.from(1e11);
+        },
+        penalty: (difficulty) => {
+            if (difficulty === 1) {
+                return `$q_4$ starts at $0$.`;
+            } else if (difficulty === 2) {
+                return `$q_4$, $q_3$ start at $0$, $q_2$ starts at $1$.`;
+            } else {
+                return `$q_4$, $q_3$, $q_2$ start at $0$, $q_2$ starts at $1$.`;
+            }
+        },
+        reward: (difficulty) => `Base $q_3$, $q_4$ value $\\times ${conjectures[1].getRewardStr(difficulty)}$.`,
+
+        getReward(difficulty) {
+            return BigNumber.from(1.35).pow(difficulty);
+        },
+        getRewardStr(difficulty) {
+            return `1.35^{${difficulty}}`;
+        },
+        onStart: (difficulty) => {
+            if (difficulty === 1) {
+                q4 = BigNumber.ZERO;
+            } else if (difficulty === 2) {
+                q4 = BigNumber.ZERO;
+                q3 = BigNumber.ZERO;
+                q2 = BigNumber.ONE;
+            } else if (difficulty === 3) {
+                q4 = BigNumber.ZERO;
+                q3 = BigNumber.ZERO;
+                q2 = BigNumber.ZERO;
+                q1 = BigNumber.ONE;
+            }
+        },
     },
     {
         maxDifficulty: 3,
         name: () => `Conjecture 3`,
-        goal: (difficulty) => BigNumber.from(1e100),
-        penalty: (difficulty) => ``,
-        reward: (difficulty) => ``,
+        goal: (difficulty) => {
+            if (difficulty === 1) return BigNumber.from(1e8);
+            if (difficulty === 2) return BigNumber.from(1e11);
+            if (difficulty === 3) return BigNumber.from(1e14);
+        },
+        penalty: (difficulty) => `$q_1$ term in $\\dot{\\rho}$ is replaced with $q_${difficulty + 1}$`,
+        reward: (difficulty) => `$${difficulty === 0 ? `1` : `\\prod_{i = 2}^{${difficulty + 1}} \\max \\left( 1, q_i \\right)`}$ term to $\\dot{\\rho}$`,
     },
     {
         maxDifficulty: 3,
@@ -638,7 +675,18 @@ var tick = (elapsedTime, multiplier) => {
     }
 
     let old_rho = currency.value;
-    let drho = getGammaUpgGammaMult() * getGammaUpgGammaTimeMult() * q1;
+    let drho = getGammaUpgGammaMult() * getGammaUpgGammaTimeMult();
+    if (conjectureActiveData.id === 2) {
+        if (conjectureActiveData.difficulty === 1) drho *= q2;
+        if (conjectureActiveData.difficulty === 2) drho *= q3;
+        if (conjectureActiveData.difficulty === 3) drho *= q4;
+    } else {
+        drho *= q1;
+        if (conjecturesHighestCompletedDifficulties[2] > 0) drho *= q2.max(BigNumber.ONE);
+        if (conjecturesHighestCompletedDifficulties[2] > 1) drho *= q3.max(BigNumber.ONE);
+        if (conjecturesHighestCompletedDifficulties[2] > 2) drho *= q4.max(BigNumber.ONE);
+    }
+
     let rho_drho = calculateXDxSoftcapped(currency.value, drho * dt);
     currency.value = rho_drho[0]; drho = rho_drho[1];
     visual_drho = (currency.value - old_rho) / dt;
@@ -697,6 +745,11 @@ var onGammaAdjustmentReset = (soft) => {
 
     if (achievement2.isUnlocked) {
         q3 *= 1.2;
+    }
+    if (conjecturesHighestCompletedDifficulties[1] > 0) {
+        const multi = conjectures[1].getReward(conjecturesHighestCompletedDifficulties[1]);
+        q3 *= multi;
+        q4 *= multi;
     }
 
     autobuyerConfiguration.q1.autobuyTimer = autobuyerConfigurationCooldown.q1()[0];
@@ -799,7 +852,8 @@ var getPrimaryEquation = () => {
         let rhodot = ``;
         if (gammaup_gammaMult.level > 0) rhodot += `\\gamma_1 `;
         if (gammaup_gammaTimeMult.level > 0) rhodot += `\\gamma_2 `;
-        rhodot += `q_1`;
+        if (conjectureActiveData.id === 2) rhodot += `q_${conjectureActiveData.difficulty + 1}`; else rhodot += `q_1`;
+        if (conjecturesHighestCompletedDifficulties[2] > 0) rhodot += `\\prod_{i = 2}^{${conjecturesHighestCompletedDifficulties[2] + 1}} \\max \\left( 1, q_i \\right)`;
         result += `\\dot{\\rho} = ${rhodot}`;
     }
     else if (stage === 1) {
