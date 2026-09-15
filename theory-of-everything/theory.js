@@ -126,10 +126,10 @@ var conjectures = [
         reward: (difficulty) => `Base $q_3$, $q_4$ value $\\times ${conjectures[1].getRewardStr(difficulty)}$.`,
 
         getReward(difficulty) {
-            return BigNumber.from(1.35).pow(difficulty);
+            return BigNumber.from(2).pow(difficulty);
         },
         getRewardStr(difficulty) {
-            return `1.35^{${difficulty}}`;
+            return `2^{${difficulty}}`;
         },
         onStart: (difficulty) => {
             if (difficulty === 1) {
@@ -852,8 +852,13 @@ var getPrimaryEquation = () => {
         let rhodot = ``;
         if (gammaup_gammaMult.level > 0) rhodot += `\\gamma_1 `;
         if (gammaup_gammaTimeMult.level > 0) rhodot += `\\gamma_2 `;
-        if (conjectureActiveData.id === 2) rhodot += `q_${conjectureActiveData.difficulty + 1}`; else rhodot += `q_1`;
-        if (conjecturesHighestCompletedDifficulties[2] > 0) rhodot += `\\prod_{i = 2}^{${conjecturesHighestCompletedDifficulties[2] + 1}} \\max \\left( 1, q_i \\right)`;
+        if (conjectureActiveData.id === 2) {
+            rhodot += `q_${conjectureActiveData.difficulty + 1}`;
+        } else {
+            rhodot += `q_1`;
+            if (conjecturesHighestCompletedDifficulties[2] > 0)
+                rhodot += `\\prod_{i = 2}^{${conjecturesHighestCompletedDifficulties[2] + 1}} \\max \\left( 1, q_i \\right)`;
+        }
         result += `\\dot{\\rho} = ${rhodot}`;
     }
     else if (stage === 1) {
