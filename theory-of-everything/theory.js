@@ -592,7 +592,7 @@ var tick = (elapsedTime, multiplier) => {
     localDeltaTime = dt;
 
     visual_dq1 = visual_dq2 = visual_dq3 = visual_dq4 = BigNumber.ZERO;
-    if (dq1.level > 0 && dq2.level > 0) {
+    if (dq1.level > 0) {
         let q_decay = getQDecay();
 
         // The decay term should be outside softcap operation
