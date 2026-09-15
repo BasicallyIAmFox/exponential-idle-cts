@@ -677,9 +677,11 @@ var tick = (elapsedTime, multiplier) => {
     let old_rho = currency.value;
     let drho = getGammaUpgGammaMult() * getGammaUpgGammaTimeMult();
     if (conjectureActiveData.id === 2) {
-        if (conjectureActiveData.difficulty === 1) drho *= q2;
-        if (conjectureActiveData.difficulty === 2) drho *= q3;
-        if (conjectureActiveData.difficulty === 3) drho *= q4;
+        if (dq1.level > 0) {
+            if (conjectureActiveData.difficulty === 1) drho *= q2;
+            if (conjectureActiveData.difficulty === 2) drho *= q3;
+            if (conjectureActiveData.difficulty === 3) drho *= q4;
+        }
     } else {
         drho *= q1;
         if (conjecturesHighestCompletedDifficulties[2] > 0) drho *= q2.max(BigNumber.ONE);
