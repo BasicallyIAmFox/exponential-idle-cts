@@ -94,10 +94,10 @@ var conjectures = [
         reward: (difficulty) => `$q \\text{ decay} \\div 1.2^{${difficulty}}$`,
 
         getPenalty(difficulty) {
-            return [0, 5, 20, 100][difficulty];
+            return [0, 5, 10, 20][difficulty];
         },
         getPenaltyStr(difficulty) {
-            return [`0`, `5`, `20`, `100`][difficulty];
+            return [`0`, `5`, `10`, `20`][difficulty];
         },
         getReward(difficulty) {
             return BigNumber.from(1.2).pow(difficulty);
@@ -151,8 +151,8 @@ var conjectures = [
         name: () => `Conjecture 3`,
         goal: (difficulty) => {
             if (difficulty === 1) return BigNumber.from(1e8);
-            if (difficulty === 2) return BigNumber.from(1e11);
-            if (difficulty === 3) return BigNumber.from(1e14);
+            if (difficulty === 2) return BigNumber.from(1e10);
+            if (difficulty === 3) return BigNumber.from(1e11);
         },
         penalty: (difficulty) => `$q_1$ term in $\\dot{\\rho}$ is replaced with $q_${difficulty + 1}$`,
         reward: (difficulty) => `$${difficulty === 0 ? `1` : `\\prod_{i = 2}^{${difficulty + 1}} \\max \\left( 1, q_i \\right)`}$ term to $\\dot{\\rho}$`,
@@ -179,7 +179,7 @@ var conjectures = [
         onStart: (difficulty) => {
             if (difficulty >= 1) { dq4.maxLevel = 0; }
             if (difficulty >= 2) { dq3.maxLevel = 0; }
-            if (difficulty >= 3) { dq2.maxLevel = 0; }
+            if (difficulty >= 3) { q2 = BigNumber.ONE; dq2.maxLevel = 0; }
         },
         onEnd: (difficulty) => {
             dq4.maxLevel = 2147483647;
