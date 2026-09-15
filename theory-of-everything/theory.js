@@ -120,7 +120,7 @@ var conjectures = [
             } else if (difficulty === 2) {
                 return `$q_4$, $q_3$ start at $0$, $q_2$ starts at $1$.`;
             } else {
-                return `$q_4$, $q_3$, $q_2$ start at $0$, $q_2$ starts at $1$.`;
+                return `$q_4$, $q_3$, $q_2$ start at $0$, $q_1$ starts at $1$.`;
             }
         },
         reward: (difficulty) => `Base $q_3$, $q_4$ value $\\times ${conjectures[1].getRewardStr(difficulty)}$.`,
