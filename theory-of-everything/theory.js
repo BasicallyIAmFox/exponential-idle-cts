@@ -629,6 +629,7 @@ var tick = (elapsedTime, multiplier) => {
     localDeltaTime = dt;
 
     visual_dq1 = visual_dq2 = visual_dq3 = visual_dq4 = BigNumber.ZERO;
+    visual_drho = BigNumber.ZERO;
     if (dq1.level > 0) {
         let q_decay = getQDecay();
 
@@ -671,29 +672,27 @@ var tick = (elapsedTime, multiplier) => {
         visual_dq3 = (q3 - old_q3) / dt;
         visual_dq4 = (q4 - old_q4) / dt;
 
-        t += dt;
-    }
-
-    let old_rho = currency.value;
-    let drho = getGammaUpgGammaMult() * getGammaUpgGammaTimeMult();
-    if (conjectureActiveData.id === 2) {
-        if (dq1.level > 0) {
+        let old_rho = currency.value;
+        let drho = getGammaUpgGammaMult() * getGammaUpgGammaTimeMult();
+        if (conjectureActiveData.id === 2) {
             if (conjectureActiveData.difficulty === 1) drho *= q2;
             if (conjectureActiveData.difficulty === 2) drho *= q3;
             if (conjectureActiveData.difficulty === 3) drho *= q4;
+        } else {
+            drho *= q1;
+            if (conjecturesHighestCompletedDifficulties[2] > 0) drho *= q2.max(BigNumber.ONE);
+            if (conjecturesHighestCompletedDifficulties[2] > 1) drho *= q3.max(BigNumber.ONE);
+            if (conjecturesHighestCompletedDifficulties[2] > 2) drho *= q4.max(BigNumber.ONE);
         }
-    } else {
-        drho *= q1;
-        if (conjecturesHighestCompletedDifficulties[2] > 0) drho *= q2.max(BigNumber.ONE);
-        if (conjecturesHighestCompletedDifficulties[2] > 1) drho *= q3.max(BigNumber.ONE);
-        if (conjecturesHighestCompletedDifficulties[2] > 2) drho *= q4.max(BigNumber.ONE);
-    }
 
-    let rho_drho = calculateXDxSoftcapped(currency.value, drho * dt);
-    currency.value = rho_drho[0]; drho = rho_drho[1];
-    visual_drho = (currency.value - old_rho) / dt;
-    if (currency.value > maxRho) {
-        maxRho = currency.value;
+        let rho_drho = calculateXDxSoftcapped(currency.value, drho * dt);
+        currency.value = rho_drho[0]; drho = rho_drho[1];
+        visual_drho = (currency.value - old_rho) / dt;
+        if (currency.value > maxRho) {
+            maxRho = currency.value;
+        }
+
+        t += dt;
     }
 
     autobuyEnabled.isAutoBuyable = false;
