@@ -925,8 +925,7 @@ var getCurrencyBarDelegate = () => {
                     if (conjectures[conjectureActiveData.id].onEnd) {
                         conjectures[conjectureActiveData.id].onEnd(conjectureActiveData.difficulty);
                     }
-                    conjectureActiveData.id = -1;
-                    conjectureActiveData.difficulty = -1;
+                    onGammaAdjustmentReset(true);
                 } else {
                     createConjecturesMenu().show();
                 }
