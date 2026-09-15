@@ -10,7 +10,7 @@ var version = 0;
 
 var stage = 0;
 var localDeltaTime = BigNumber.ZERO;
-var achievement1, achievement2, achievement3, achievement5, achievement4;
+var achievement1, achievement2, achievement3, achievement5, achievement6, achievement4;
 
 var stringTickspeed = (value) => `\\text{Tickspeed} : \\text{${value}} \\text{ / sec}`;
 var t = BigNumber.ZERO;
@@ -38,10 +38,23 @@ var q1 = BigNumber.ZERO, q2 = BigNumber.ZERO, q3 = BigNumber.ONE, q4 = BigNumber
 var dq1, dq2, dq3, dq4;
 var visual_drho = BigNumber.ZERO;
 var visual_dq1 = BigNumber.ZERO, visual_dq2 = BigNumber.ZERO, visual_dq3 = BigNumber.ZERO, visual_dq4 = BigNumber.ZERO;
-var getQDecay = () => qBaseDecay + getGammaUpgGammaQDecay();
+var getQDecay = () => {
+    let result = qBaseDecay + getGammaUpgGammaQDecay();
+
+    if (conjectureActiveData.id === 0) {
+        result /= conjectures[0].getPenalty(conjectureActiveData.difficulty);
+    }
+
+    return result;
+};
 var getQDecayLatex = () => {
     let result = qBaseDecayStr;
-    if (gammaup_gammaQDecay.level > 0) result = `(${result} + \\gamma_7)`;
+    if (gammaup_gammaQDecay.level > 0) result = `${result} + \\gamma_5`;
+
+    if (conjecturesHighestCompletedDifficulties[0] > 0) {
+        result = `${conjectures[0].getRewardStr(conjecturesHighestCompletedDifficulties[0])} (${result})`;
+    }
+
     return result;
 }
 
@@ -53,12 +66,80 @@ const gammaGainRhoThresholdStr = `1000`;
 var gammaCurrency;
 var gammaCurrencyTotal = BigNumber.ZERO;
 var gammaResets = 0;
-var gammaup_gammaMult, gammaup_gammaTimeMult, gammaup_gammaTickspeed, gammaup_gammaDQ2Factor, gammaup_gammaDQ1Scaling, gammaup_gammaGainExp;
-var gammaup_gammaQDecay;
+var gammaup_gammaMult, gammaup_gammaTimeMult, gammaup_gammaTickspeed, gammaup_gammaDQ2Factor, gammaup_gammaQDecay, gammaup_gammaGainExp;
+var gammaup_gammaDQ1Scaling;
 var getGammaGainScaling = () => gammaGainBaseScaling + getGammaUpgGammaGainExp();
 var getGammaGainScalingLatex = () => `${gammaGainBaseScalingStr} + \\gamma_6`;
 var getGammaGainRhoThreshold = () => gammaGainRhoThreshold;
 var getGammaGainRhoThresholdLatex = () => gammaGainRhoThresholdStr;
+
+var conjectureActiveData = {
+    ["id"]: -1,
+    ["difficulty"]: -1,
+};
+var conjecturesHighestCompletedDifficulties = [0, 0, 0, 0];
+var conjectures = [
+    {
+        maxDifficulty: 3,
+        name: () => `Conjecture 1`,
+        goal: (difficulty) => BigNumber.ZERO,
+        penalty: (difficulty) => `$q \\text{ decay} \\times ${conjectures[0].getPenaltyStr(difficulty)}$`,
+        reward: (difficulty) => `$q \\text{ decay} \\div 1.2^{${difficulty}}$`,
+
+        getPenalty(difficulty) {
+            return [0, 5, 20, 100][difficulty];
+        },
+        getPenaltyStr(difficulty) {
+            return [`0`, `5`, `20`, `100`][difficulty];
+        },
+        getReward(difficulty) {
+            return BigNumber.from(1.2).pow(difficulty);
+        },
+        getRewardStr(difficulty) {
+            return `1.2^{${difficulty}}`;
+        },
+    },
+    {
+        maxDifficulty: 3,
+        name: () => `Conjecture 2`,
+        goal: (difficulty) => BigNumber.ZERO,
+        penalty: (difficulty) => ``,
+        reward: (difficulty) => ``,
+    },
+    {
+        maxDifficulty: 3,
+        name: () => `Conjecture 3`,
+        goal: (difficulty) => BigNumber.ZERO,
+        penalty: (difficulty) => ``,
+        reward: (difficulty) => ``,
+    },
+    {
+        maxDifficulty: 3,
+        name: () => `Conjecture 4`,
+        goal: (difficulty) => BigNumber.ZERO,
+        penalty: (difficulty) => {
+            if (difficulty === 1) {
+                return `$q_4$ is disabled. Softcap is stronger.`;
+            } else if (difficulty === 2) {
+                return `$q_4$, $q_3$ are disabled. Softcap is stronger.`;
+            } else {
+                return `$q_4$, $q_3$, $q_2$ are disabled. Softcap is stronger.`;
+            }
+        },
+        reward: (difficulty) => ``,
+
+        onStart: (difficulty) => {
+            if (difficulty >= 1) { dq4.maxLevel = 0; }
+            if (difficulty >= 2) { dq3.maxLevel = 0; }
+            if (difficulty >= 3) { dq2.maxLevel = 0; }
+        },
+        onEnd: (difficulty) => {
+            dq4.maxLevel = 2147483647;
+            dq3.maxLevel = 2147483647;
+            dq2.maxLevel = 2147483647;
+        },
+    },
+];
 
 // Auto-buyer variables
 var autobuyerUnlock, autobuyEnabled;
@@ -244,19 +325,19 @@ var init = () => {
     }
     {
         let getDesc = (level) => {
-            let base = `\\gamma_5 = 0.1 \\times ${level}`;
-            if (level === 0) base = `\\text{Add } \\gamma_5 \\text{ term to } \\dot{q_1} \\text{ scaling} \\\\ ${base}`;
+            let base = `\\gamma_5 = 2 \\times ${level}`;
+            if (level === 0) base = `\\text{Add } \\gamma_5 \\text{ term to all } \\dot{q} \\text{ decay} ; \\text{ } ${base}`;
             return base;
         };
-        let getInfo = (level) => {
-            let base = `\\gamma_5 = ${BigNumber.from(getGammaUpgGammaDQ1Scaling(level))}`;
-            if (level === 0) base = `\\text{Add } \\gamma_5 \\text{ term to } \\dot{q_1} \\text{ scaling} \\\\ ${base}`;
+        let getInfo = (level) = (level) => {
+            let base = `\\gamma_5 = ${getGammaUpgGammaQDecay(level)}`;
+            if (level === 0) base = `\\text{Add } \\gamma_5 \\text{ term to all } \\dot{q} \\text{ decay} ; \\text{ } ${base}`;
             return base;
         };
-        gammaup_gammaDQ1Scaling = theory.createUpgrade(21, gammaCurrency, new ExponentialCost(100, Math.log2(7)));
-        gammaup_gammaDQ1Scaling.getDescription = (_) => Utils.getMath(getDesc(gammaup_gammaDQ1Scaling.level));
-        gammaup_gammaDQ1Scaling.getInfo = (amount) => Utils.getMathTo(getInfo(gammaup_gammaDQ1Scaling.level), getInfo(gammaup_gammaDQ1Scaling.level + amount));
-        gammaup_gammaDQ1Scaling.maxLevel = 3;
+        gammaup_gammaQDecay = theory.createUpgrade(22, gammaCurrency, new ExponentialCost(100, Math.log2(2.5)));
+        gammaup_gammaQDecay.getDescription = (_) => Utils.getMath(getDesc(gammaup_gammaQDecay.level));
+        gammaup_gammaQDecay.getInfo = (amount) => Utils.getMathTo(getInfo(gammaup_gammaQDecay.level), getInfo(gammaup_gammaQDecay.level + amount));
+        gammaup_gammaQDecay.maxLevel = 5;
     }
     {
         let getDesc = (level) => `\\gamma_6 = 0.04 \\times ${level}`;
@@ -268,23 +349,23 @@ var init = () => {
     }
     {
         let getDesc = (level) => {
-            let base = `\\gamma_7 = 2 \\times ${level}`;
-            if (level === 0) base = `\\text{Add } \\gamma_7 \\text{ term to all } \\dot{q} \\text{ decay} ; \\text{ } ${base}`;
+            let base = `\\gamma_7 = 0.1 \\times ${level}`;
+            if (level === 0) base = `\\text{Add } \\gamma_7 \\text{ term to } \\dot{q_1} \\text{ doubling base} \\\\ ${base}`;
             return base;
         };
-        let getInfo = (level) = (level) => {
-            let base = `\\gamma_7 = ${getGammaUpgGammaQDecay(level)}`;
-            if (level === 0) base = `\\text{Add } \\gamma_7 \\text{ term to all } \\dot{q} \\text{ decay} ; \\text{ } ${base}`;
+        let getInfo = (level) => {
+            let base = `\\gamma_7 = ${BigNumber.from(getGammaUpgGammaDQ1Scaling(level))}`;
+            if (level === 0) base = `\\text{Add } \\gamma_7 \\text{ term to } \\dot{q_1} \\text{ doubling base} \\\\ ${base}`;
             return base;
         };
-        gammaup_gammaQDecay = theory.createUpgrade(22, gammaCurrency, new ExponentialCost(10000, Math.log2(1.2)));
-        gammaup_gammaQDecay.getDescription = (_) => Utils.getMath(getDesc(gammaup_gammaQDecay.level));
-        gammaup_gammaQDecay.getInfo = (amount) => Utils.getMathTo(getInfo(gammaup_gammaQDecay.level), getInfo(gammaup_gammaQDecay.level + amount));
-        gammaup_gammaQDecay.maxLevel = 5;
+        gammaup_gammaDQ1Scaling = theory.createUpgrade(21, gammaCurrency, new ExponentialCost(10000, Math.log2(2.1)));
+        gammaup_gammaDQ1Scaling.getDescription = (_) => Utils.getMath(getDesc(gammaup_gammaDQ1Scaling.level));
+        gammaup_gammaDQ1Scaling.getInfo = (amount) => Utils.getMathTo(getInfo(gammaup_gammaDQ1Scaling.level), getInfo(gammaup_gammaDQ1Scaling.level + amount));
+        gammaup_gammaDQ1Scaling.maxLevel = 3;
     }
 
     {
-        autobuyerUnlock = theory.createUpgrade(11, gammaCurrency, new ConstantCost(5));
+        autobuyerUnlock = theory.createUpgrade(11, currency, new ConstantCost(1e6));
         autobuyerUnlock.description = Localization.getUpgradeAutoBuyerDesc();
         autobuyerUnlock.info = `Allows to automatically purchase theory upgrades`;
         autobuyerUnlock.maxLevel = 1;
@@ -372,7 +453,8 @@ var init = () => {
         achievement1 = theory.createAchievement(0, achievement_category1, "Achievements are the way to go", `Reach 1ρ, 1 q₁, or 1 q₂.\n\nReward: all production above 1 is powered by 0.8.`, () => currency.value >= 1 || q1 >= 1 || q2 >= 1);
         achievement2 = theory.createAchievement(1, achievement_category1, "No progress", `Let q₃ and q₄ fall below 0.001.\n\nReward: initial q₃ value is multiplied by 1.2.`, () => q3 < 0.001 && q4 < 0.001);
         achievement3 = theory.createAchievement(2, achievement_category1, "Decay was too strong", `Perform a gamma reset.\n\nReward: multiply γ gain by 2.`, () => gammaResets > 0);
-        achievement5 = theory.createAchievement(4, achievement_category1, "Full house", `Max out γ₄, γ₅, and γ₆.\n\nReward: unlock more γ upgrades.`, () => gammaup_gammaDQ2Factor.level === gammaup_gammaDQ2Factor.maxLevel && gammaup_gammaDQ1Scaling.level === gammaup_gammaDQ1Scaling.maxLevel && gammaup_gammaGainExp.level === gammaup_gammaGainExp.maxLevel);
+        achievement5 = theory.createAchievement(4, achievement_category1, "Full house", `Max out γ₄, γ₅, and γ₆.\n\nReward: unlock γ₇.`, () => gammaup_gammaDQ2Factor.level === gammaup_gammaDQ2Factor.maxLevel && gammaup_gammaQDecay.level === gammaup_gammaQDecay.maxLevel && gammaup_gammaGainExp.level === gammaup_gammaGainExp.maxLevel);
+        achievement6 = theory.createAchievement(5, achievement_category1, "Scaling!", `Max out γ₇.\n\nReward: unlock Conjectures.`, () => gammaup_gammaDQ1Scaling.level === gammaup_gammaDQ1Scaling.maxLevel);
         achievement4 = theory.createAchievement(3, achievement_category1, "Big q family", `Let q₁, q₂, q₃ and q₄ all be above 1.`, () => q1 > 1 && q2 > 1 && q3 > 1 && q4 > 1);
     }
 
@@ -395,14 +477,22 @@ Still, though, everything has been merely a refresher for your mind so far.
 
 You acknowledge that at this rate you'll soon start making no progress.
 You must adjust more constants for this to work out.`, () => maxRho >= 1000);
+        
+        theory.createStoryChapter(2, "A Burst", `After adjusting the constants enough, you begin to see something.
+As you recheck all your calculations, you're shocked by what you see.
+
+A pattern.
+
+How could you not see it before? It was staring at you all this time.
+It seems like you'll be able to advance this theory after all.`, () => achievement6.isUnlocked);
     }
 
     updateAvailability();
 };
 
 var updateAvailability = () => {
-    autobuyerUnlock.isAvailable = gammaResets > 0 && stage === -1 && autobuyerUnlock.level < 1;
-    autobuyEnabled.isAvailable = gammaResets > 0 && stage === -1 && autobuyerUnlock.level > 0;
+    autobuyerUnlock.isAvailable = stage === -1 && autobuyerUnlock.level < 1;
+    autobuyEnabled.isAvailable = stage === -1 && autobuyerUnlock.level > 0;
     autobuyerUnlockDQ1.isAvailable = autobuyEnabled.isAvailable && autobuyerUnlockDQ1.level < 1;
     autobuyerDQ1Rate.isAvailable = autobuyerDQ1Bulk.isAvailable = autobuyEnabled.isAvailable && autobuyerUnlockDQ1.level > 0;
     autobuyerUnlockDQ2.isAvailable = autobuyEnabled.isAvailable && autobuyerUnlockDQ2.level < 1;
@@ -419,9 +509,10 @@ var updateAvailability = () => {
     gammaup_gammaTimeMult.isAvailable = stage === 1;
     gammaup_gammaTickspeed.isAvailable = stage === 1;
     gammaup_gammaDQ2Factor.isAvailable = stage === 1;
-    gammaup_gammaDQ1Scaling.isAvailable = stage === 1;
+    gammaup_gammaQDecay.isAvailable = stage === 1;
     gammaup_gammaGainExp.isAvailable = stage === 1;
-    gammaup_gammaQDecay.isAvailable = achievement5.isUnlocked && stage === 1;
+    gammaup_gammaDQ1Scaling.isAvailable = achievement5.isUnlocked && stage === 1;
+    gammaupsing_conjectures = achievement6.isUnlocked && stage === 1;
 };
 
 var getInternalState = () => JSON.stringify({
@@ -433,6 +524,8 @@ var getInternalState = () => JSON.stringify({
     q4: q4.toBase64String(),
     gammaResets,
     gammaCurrencyTotal: gammaCurrencyTotal.toBase64String(),
+    conjectureActiveData,
+    conjecturesHighestCompletedDifficulties,
     autobuyerConfiguration: autobuyerConfiguration,
 });
 
@@ -448,6 +541,8 @@ var setInternalState = (stateStr) => {
     q4 = BigNumber.fromBase64String(state.q4);
     gammaResets = state.gammaResets;
     gammaCurrencyTotal = BigNumber.fromBase64String(state.gammaCurrencyTotal);
+    if (state.conjectureActiveData) conjectureActiveData = state.conjectureActiveData;
+    if (state.conjecturesHighestCompletedDifficulties) conjecturesHighestCompletedDifficulties = state.conjecturesHighestCompletedDifficulties;
     autobuyerConfiguration = state.autobuyerConfiguration;
 };
 
@@ -459,14 +554,34 @@ var tick = (elapsedTime, multiplier) => {
 
     visual_dq1 = visual_dq2 = visual_dq3 = visual_dq4 = BigNumber.ZERO;
     if (dq1.level > 0 && dq2.level > 0) {
-        // TODO: DE
-        let old_q1 = q1, old_q2 = q2, old_q3 = q3, old_q4 = q4;
-
         let q_decay = getQDecay();
+
+        // The decay term should be outside softcap operation
+        /*let q_scale = BigNumber.ONE - BigNumber.E.pow(-dt / q_decay);
+        if (q_scale < 1e-13) q_scale = dt / q_decay;
+
+        let baseDQ4 = getDQ4();
+        let q4_dq4 = calculateXDxSoftcapped(q4, q_scale * (baseDQ4 * q_decay - q4));
+        q4 = q4_dq4[0].max(BigNumber.ZERO); visual_dq4 = q4_dq4[1] / dt;
+
+        let baseDQ3 = getDQ3() * q4;
+        let q3_dq3 = calculateXDxSoftcapped(q3, q_scale * (baseDQ3 * q_decay - q3));
+        q3 = q3_dq3[0].max(BigNumber.ZERO); visual_dq3 = q3_dq3[1] / dt;
+
+        let baseDQ2 = getDQ2() * getGammaUpgGammaDQ2Factor() * q3;
+        let q2_dq2 = calculateXDxSoftcapped(q2, q_scale * (baseDQ2 * q_decay - q2));
+        q2 = q2_dq2[0].max(BigNumber.ZERO); visual_dq2 = q2_dq2[1] / dt;
+
+        let baseDQ1 = getDQ1() * q2;
+        let q1_dq1 = calculateXDxSoftcapped(q1, q_scale * (baseDQ1 * q_decay - q1));
+        q1 = q1_dq1[0].max(BigNumber.ZERO); visual_dq1 = q1_dq1[1] / dt;*/
+
+        let old_q1 = q1, old_q2 = q2, old_q3 = q3, old_q4 = q4;
         let dq1 = getDQ1() * q2;
         let dq2 = getDQ2() * getGammaUpgGammaDQ2Factor() * q3;
         let dq3 = getDQ3() * q4;
         let dq4 = getDQ4();
+
         let q1_dq1 = calculateXDxSoftcapped(q1, dq1 * dt);
         let q2_dq2 = calculateXDxSoftcapped(q2, dq2 * dt);
         let q3_dq3 = calculateXDxSoftcapped(q3, dq3 * dt);
@@ -524,9 +639,11 @@ var tick = (elapsedTime, multiplier) => {
 var onGammaAdjustmentReset = (soft) => {
     if (!soft) {
         const dgamma = getGammaPending();
-        gammaCurrency.value += dgamma;
-        gammaCurrencyTotal += dgamma;
-        gammaResets++;
+        if (dgamma > 0) {
+            gammaCurrency.value += dgamma;
+            gammaCurrencyTotal += dgamma;
+            gammaResets++;
+        }
     }
 
     currency.value = BigNumber.ZERO;
@@ -546,16 +663,33 @@ var onGammaAdjustmentReset = (soft) => {
     t = BigNumber.ZERO;
     maxRho = BigNumber.ZERO;
     theory.clearGraph();
+
+    if (conjectureActiveData.id !== -1 && conjectures[conjectures.id].onEnd) {
+        conjectures[conjectures.id].onEnd(conjectureActiveData.difficulty);
+    }
+    conjectureActiveData.id = -1;
+    conjectureActiveData.difficulty = -1;
 };
 
 var postPublish = () => {
 };
 
-var canResetStage = () => gammaResets < 1 && maxRho < 1000;
+var canResetStage = () => gammaResets < 1 && maxRho < 1000 || conjectureActiveData.id > -1;
 var getResetStageMessage = () => `You can perform a reset when your ${currency.symbol} is stuck.`;
 var resetStage = () => {
+    let oldConjectureActiveDataId = {
+        id: conjectureActiveData.id,
+        difficulty: conjectureActiveData.difficulty,
+    };
+
     onGammaAdjustmentReset(true);
-}
+
+    conjectureActiveData.id = oldConjectureActiveDataId.id;
+    conjectureActiveData.difficulty = oldConjectureActiveDataId.difficulty;
+    if (conjectureActiveData.id !== -1 && conjectures[conjectures.id].onStart) {
+        conjectures[conjectures.id].onStart(conjectureActiveData.difficulty);
+    }
+};
 
 //
 // UI
@@ -634,7 +768,7 @@ var getPrimaryEquation = () => {
     else if (stage === 1) {
         let base = `\\left( \\frac{\\bar{\\rho}}{${getGammaGainRhoThresholdLatex()}} \\right)^{${getGammaGainScalingLatex()}}`;
         if (achievement3.isUnlocked) {
-            base = `2 \\times ${base}`;
+            base = `2 ${base}`;
         }
         result += `d \\gamma = ${base}`;
     }
@@ -661,10 +795,20 @@ var getSecondaryEquation = () => {
         theory.secondaryEquationScale = 1;
 
         if (achievement1.isUnlocked) {
-            result += `(\\forall x)(x > 1 \\Rightarrow \\dot{x} = (x^{1.25} + \\dot{x})^{0.8} - x) \\\\`;
+            let softcap = `0.8`;
+            let softcapReciprocal = `1.25`;
+            if (conjectureActiveData.id === 3) {
+                softcap = `0.4`;
+                softcapReciprocal = `2.5`;
+            }
+
+            result += `(\\forall x) \\left( x > 1 \\Rightarrow \\dot{x} = \\left( x^{${softcapReciprocal}} + \\dot{x} \\right)^{${softcap}} - x \\right) \\\\`;
         }
 
-        result += `(\\forall q)(\\dot{q} = \\dot{q} - q / ${getQDecayLatex()})`;
+        let qDecayStr = `\\frac{`;
+        if (conjectureActiveData.id === 0) qDecayStr += `${conjectures[0].getPenaltyStr(conjectureActiveData.difficulty)} `;
+        qDecayStr = `${qDecayStr} q}{${getQDecayLatex()}}`
+        result += `\\left( \\forall q \\right) \\left( \\dot{q} = \\dot{q} - ${qDecayStr} \\right)`;
     }
     else if (stage === 1) {
         theory.secondaryEquationHeight = 20;
@@ -705,7 +849,7 @@ var getQuaternaryEntries = () => {
 };
 
 var getCurrencyBarDelegate = () => {
-    return ui.createFrame({
+    let currencyBar = ui.createFrame({
         translationY: -2,
         heightRequest: 30,
         content: ui.createStackLayout({
@@ -761,6 +905,43 @@ var getCurrencyBarDelegate = () => {
                 }),
             ],
         }),
+    });
+
+    let conjecturesButton = ui.createFrame({
+        heightRequest: 50,
+        children: [
+            ui.createLatexLabel({
+                horizontalOptions: LayoutOptions.START,
+                horizontalTextAlignment: TextAlignment.START,
+                verticalTextAlignment: TextAlignment.CENTER,
+                margin: new Thickness(15, 0, 15, 0),
+                fontSize: 12,
+                text: () => conjectureActiveData.id > -1 ? `Exit ${conjectures[conjectureActiveData.id].name()}` : `Conjectures`,
+            }),
+        ],
+        onTouched: (e) => {
+            if (e.type.isReleased()) {
+                if (conjectureActiveData.id > -1) {
+                    if (conjectures[conjectureActiveData.id].onEnd) {
+                        conjectures[conjectureActiveData.id].onEnd(conjectureActiveData.difficulty);
+                    }
+                    conjectureActiveData.id = -1;
+                    conjectureActiveData.difficulty = -1;
+                } else {
+                    createConjecturesMenu().show();
+                }
+            }
+        },
+        isVisible: () => achievement6.isUnlocked && stage === 1,
+    });
+
+    return ui.createStackLayout({
+        orientation: StackOrientation.VERTICAL,
+        spacing: 0,
+        children: [
+            currencyBar,
+            conjecturesButton,
+        ],
     });
 };
 
@@ -884,6 +1065,130 @@ var createGammaResetMenu = () => {
     return popup;
 };
 
+let _conjecturesMenu;
+var createConjecturesMenu = () => {
+    let createConjecture = (id) => {
+        const conj = conjectures[id];
+
+        const completedDifficulty = conjecturesHighestCompletedDifficulties[id];
+        const nextDifficulty = Math.min(completedDifficulty + 1, conj.maxDifficulty);
+
+        let mainButton = ui.createFrame({
+            column: 1,
+            heightRequest: 70,
+            content: ui.createStackLayout({
+                children: [
+                    ui.createLatexLabel({
+                        horizontalTextAlignment: TextAlignment.CENTER,
+                        verticalTextAlignment: TextAlignment.CENTER,
+                        margin: new Thickness(0, 8, 0, 0),
+                        fontSize: 12,
+                        text: () => `${conj.name()}: ${completedDifficulty}/${conj.maxDifficulty}`,
+                    }),
+                    ui.createLatexLabel({
+                        horizontalTextAlignment: TextAlignment.CENTER,
+                        verticalTextAlignment: TextAlignment.CENTER,
+                        margin: new Thickness(0, -4, 0, 0),
+                        fontSize: 10,
+                        textColor: Color.TEXT_MEDIUM,
+                        text: () => `Goal: ${conj.goal(nextDifficulty)}${currency.symbol}. ${conj.penalty(nextDifficulty)}`,
+                    }),
+                    ui.createLatexLabel({
+                        horizontalTextAlignment: TextAlignment.CENTER,
+                        verticalTextAlignment: TextAlignment.CENTER,
+                        margin: new Thickness(0, -2, 0, 0),
+                        fontSize: 10,
+                        textColor: Color.TEXT_MEDIUM,
+                        text: () => {
+                            let text = `Reward: ${conj.reward(completedDifficulty)}`;
+                            if (completedDifficulty < conj.maxDifficulty) {
+                                text += ` $\\to$ ${conj.reward(nextDifficulty)}`;
+                            }
+                            return text;
+                        },
+                    }),
+                ],
+            }),
+            onTouched: (e) => {
+                if (e.type.isReleased()) {
+                    let yesButton = ui.createButton({
+                        column: 0,
+                        text: "Yes",
+                    });
+
+                    let noButton = ui.createButton({
+                        column: 1,
+                        text: "No",
+                    });
+
+                    let popup = ui.createPopup({
+                        title: conj.name(),
+                        content: ui.createStackLayout({
+                            children: [
+                                ui.createLatexLabel({
+                                    margin: new Thickness(0, 10, 0, 0),
+                                    horizontalTextAlignment: TextAlignment.CENTER,
+                                    text: `You are about to enter ${conj.name()}.`,
+                                }),
+                                ui.createLatexLabel({
+                                    margin: new Thickness(0, 10, 0, 0),
+                                    horizontalTextAlignment: TextAlignment.CENTER,
+                                    text: `Entering will reset your current Gamma run and apply the Conjectures penalty.`,
+                                }),
+                                ui.createLatexLabel({
+                                    margin: new Thickness(0, 15, 0, 0),
+                                    horizontalTextAlignment: TextAlignment.CENTER,
+                                    text: `Do you want to continue?`,
+                                }),
+                                ui.createGrid({
+                                    margin: new Thickness(0, 10, 0, 0),
+                                    children: [
+                                        yesButton,
+                                        noButton,
+                                    ],
+                                }),
+                            ],
+                        }),
+                    });
+
+                    yesButton.onClicked = () => {
+                        popup.hide();
+                        _conjecturesMenu.hide();
+                        onGammaAdjustmentReset(true);
+
+                        conjectureActiveData.id = id;
+                        conjectureActiveData.difficulty = Math.min(completedDifficulty + 1, conj.maxDifficulty);
+                        if (conjectures[id].onStart) {
+                            conjectures[id].onStart(conjectureActiveData.difficulty);
+                        }
+
+                        stage = 0;
+                        updateAvailability();
+                    };
+                    noButton.onClicked = () => popup.hide();
+
+                    popup.show();
+                }
+            },
+        });
+
+        return mainButton;
+    };
+
+    return _conjecturesMenu = ui.createPopup({
+        isPeekable: true,
+        title: `Conjectures`,
+        content: ui.createStackLayout({
+            children: [
+                createConjecture(0),
+                createConjecture(1),
+                createConjecture(2),
+                createConjecture(3),
+            ],
+        }),
+    });
+};
+
 var canGoToPreviousStage = () => stage > -1;
 
 var goToPreviousStage = () => {
@@ -935,9 +1240,9 @@ var getGammaUpgGammaMult = (level = gammaup_gammaMult.level) => BigNumber.from(1
 var getGammaUpgGammaTimeMult_StepwiseScaling = (level) => Utils.getStepwisePowerSum(level, 2, 10, 0);
 var getGammaUpgGammaTimeMult = (level = gammaup_gammaTimeMult.level) => 1 + 1e-6 * getGammaUpgGammaTimeMult_StepwiseScaling(level) * t.pow(3);
 var getGammaUpgGammaDQ2Factor = (level = gammaup_gammaDQ2Factor.level) => BigNumber.from(1.1).pow(level);
-var getGammaUpgGammaDQ1Scaling = (level = gammaup_gammaDQ1Scaling.level) => 0.1 * level;
-var getGammaUpgGammaGainExp = (level = gammaup_gammaGainExp.level) => BigNumber.from(0.04 * level);
 var getGammaUpgGammaQDecay = (level = gammaup_gammaQDecay.level) => BigNumber.from(2 * level);
+var getGammaUpgGammaGainExp = (level = gammaup_gammaGainExp.level) => BigNumber.from(0.04 * level);
+var getGammaUpgGammaDQ1Scaling = (level = gammaup_gammaDQ1Scaling.level) => 0.1 * level;
 
 //
 // Math
@@ -947,12 +1252,18 @@ var productionSoftcap = (x) => {
     if (x > 1) {
         x = x.pow(0.8);
     }
+    if (conjectureActiveData.id === 3 && x > 1) {
+        x = x.pow(0.5);
+    }
     return x;
 };
 
 var productionSoftcapInverse = (x) => {
     if (x > 1) {
         x = x.pow(1 / 0.8);
+    }
+    if (conjectureActiveData.id === 3 && x > 1) {
+        x = x.pow(1 / 0.5);
     }
     return x;
 };
