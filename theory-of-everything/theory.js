@@ -87,7 +87,8 @@ var conjectures = [
         name: () => `Conjecture 1`,
         goal: (difficulty) => {
             if (difficulty === 1) return BigNumber.from(1e8);
-            return BigNumber.from(1e100);
+            if (difficulty === 2) return BigNumber.from(1e10);
+            if (difficulty === 3) return BigNumber.from(1e12);
         },
         penalty: (difficulty) => `$q \\text{ decay} \\times ${conjectures[0].getPenaltyStr(difficulty)}$`,
         reward: (difficulty) => `$q \\text{ decay} \\div 1.2^{${difficulty}}$`,
@@ -122,7 +123,11 @@ var conjectures = [
     {
         maxDifficulty: 3,
         name: () => `Conjecture 4`,
-        goal: (difficulty) => BigNumber.from(200000),
+        goal: (difficulty) => {
+            if (difficulty === 1) return BigNumber.from(250000);
+            if (difficulty === 2) return BigNumber.from(750000);
+            if (difficulty === 3) return BigNumber.from(2250000);
+        },
         penalty: (difficulty) => {
             if (difficulty === 1) {
                 return `$q_4$ is disabled. Softcap is stronger.`;
@@ -1001,7 +1006,7 @@ var getEquationOverlay = () => {
                         verticalOptions: LayoutOptions.START,
                         children: [
                             ui.createProgressBar({
-                                progress: () => conjectureActiveData.id > -1 ? Math.min(((1 + currency.value).log10() / conjectures[conjectureActiveData.id].goal(conjectureActiveData.difficulty).log10()).toNumber(), 1) : 0,
+                                progress: () => conjectureActiveData.id > -1 ? Math.min(((1 + maxRho).log10() / conjectures[conjectureActiveData.id].goal(conjectureActiveData.difficulty).log10()).toNumber(), 1) : 0,
                             }),
                         ],
                         isVisible: () => conjectureActiveData.id > -1,
