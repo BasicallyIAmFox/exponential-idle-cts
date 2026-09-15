@@ -494,7 +494,7 @@ var tick = (elapsedTime, multiplier) => {
 
     autobuyEnabled.isAutoBuyable = false;
     if (autobuyEnabled.level < 1) {
-        const autobuyDt = elapsedTime * multiplier;
+        const autobuyDt = elapsedTime;
 
         Object.keys(autobuyerConfiguration).forEach(key => {
             const value = autobuyerConfiguration[key];
@@ -521,12 +521,15 @@ var tick = (elapsedTime, multiplier) => {
     theory.invalidateQuaternaryValues();
 };
 
-var onGammaAdjustmentReset = () => {
-    const dgamma = getGammaPending();
-    gammaCurrency.value += dgamma;
-    gammaCurrencyTotal += dgamma;
-    currency.value = BigNumber.ZERO;
+var onGammaAdjustmentReset = (soft) => {
+    if (!soft) {
+        const dgamma = getGammaPending();
+        gammaCurrency.value += dgamma;
+        gammaCurrencyTotal += dgamma;
+        gammaResets++;
+    }
 
+    currency.value = BigNumber.ZERO;
     dq1.level = dq2.level = dq3.level = dq4.level = 0;
     q1 = q2 = BigNumber.ZERO;
     q3 = q4 = BigNumber.ONE;
@@ -541,13 +544,18 @@ var onGammaAdjustmentReset = () => {
     autobuyerConfiguration.q4.autobuyTimer = autobuyerConfigurationCooldown.q4()[0];
 
     t = BigNumber.ZERO;
-    gammaResets++;
     maxRho = BigNumber.ZERO;
     theory.clearGraph();
 };
 
 var postPublish = () => {
 };
+
+var canResetStage = () => gammaResets < 1 && maxRho < 1000;
+var getResetStageMessage = () => `You can perform a reset when your ${currency.symbol} is stuck.`;
+var resetStage = () => {
+    onGammaAdjustmentReset(true);
+}
 
 //
 // UI
@@ -816,7 +824,7 @@ var createGammaResetMenu = () => {
             });
 
             yesButton.onClicked = () => {
-                onGammaAdjustmentReset();
+                onGammaAdjustmentReset(false);
                 confirmationPopup.hide();
                 popup.hide();
             };
