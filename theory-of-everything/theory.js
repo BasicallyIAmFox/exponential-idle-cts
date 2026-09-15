@@ -676,13 +676,13 @@ var tick = (elapsedTime, multiplier) => {
 };
 
 var onGammaAdjustmentReset = (soft) => {
+    const dgamma = getGammaPending();
+    if (dgamma > 0) {
+        gammaCurrency.value += dgamma;
+        gammaCurrencyTotal += dgamma;
+    }
     if (!soft) {
-        const dgamma = getGammaPending();
-        if (dgamma > 0) {
-            gammaCurrency.value += dgamma;
-            gammaCurrencyTotal += dgamma;
-            gammaResets++;
-        }
+        gammaResets++;
     }
 
     currency.value = BigNumber.ZERO;
