@@ -155,7 +155,7 @@ var conjectures = [
             if (difficulty === 3) return BigNumber.from(3e16);
         },
         penalty: (difficulty) => `$q_1$ term in $\\dot{\\rho}$ is replaced with $q_${difficulty + 1}$`,
-        reward: (difficulty) => `${difficulty === 0 ? `$\\dot{\\rho} \\times 1$` : `$\\dot{\\rho} \\times \\prod_{i = 2}^{${difficulty + 1}} \\max \\left( 1, q_i \\right)`}$`,
+        reward: (difficulty) => `${difficulty === 0 ? `$\\dot{\\rho} \\times 1$` : `$\\dot{\\rho} \\times \\prod_{i = 2}^{${difficulty + 1}} \\max \\left( 1, q_i \\right)$`}`,
     },
     {
         maxDifficulty: 3,
