@@ -316,7 +316,7 @@ var init = () => {
     {
         let getDesc = (level) => `\\dot{q}_4 = ${getDQ4(level).toString(1)}`;
         let getInfo = (level) => `\\dot{q}_4 = ${getDQ4(level).toString(4)}`;
-        dq4 = theory.createUpgrade(3, currency, new ExponentialCost(8e20, Math.log2(2e8) / 2));
+        dq4 = theory.createUpgrade(3, currency, new ExponentialCost(8e18, Math.log2(2e8) / 2));
         dq4.getDescription = (_) => Utils.getMath(getDesc(dq4.level));
         dq4.getInfo = (amount) => Utils.getMathTo(getInfo(dq4.level), getInfo(dq4.level + amount));
         autobuyerConfigurationUpgradeMapper["q4"] = dq4;
