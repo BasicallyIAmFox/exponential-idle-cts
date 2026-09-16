@@ -118,12 +118,12 @@ var conjectures = [
             if (difficulty === 1) {
                 return `$q_4$ starts at $0$.`;
             } else if (difficulty === 2) {
-                return `$q_4$, $q_3$ start at $0$, $q_2$ starts at $1$.`;
+                return `$q_4$, $q_3$ = $0$, $q_2$ = $1$.`;
             } else {
-                return `$q_4$, $q_3$, $q_2$ start at $0$, $q_1$ starts at $1$.`;
+                return `$q_4$, $q_3$, $q_2$ = $0$, $q_1$ = $1$.`;
             }
         },
-        reward: (difficulty) => `Base $q_3$, $q_4$ value $\\times ${conjectures[1].getRewardStr(difficulty)}$.`,
+        reward: (difficulty) => `Base $q_3$, $q_4$ $\\times ${conjectures[1].getRewardStr(difficulty)}$.`,
 
         getReward(difficulty) {
             return BigNumber.from(2).pow(difficulty);
@@ -155,7 +155,7 @@ var conjectures = [
             if (difficulty === 3) return BigNumber.from(3e16);
         },
         penalty: (difficulty) => `$q_1$ term in $\\dot{\\rho}$ is replaced with $q_${difficulty + 1}$`,
-        reward: (difficulty) => `$${difficulty === 0 ? `1` : `\\prod_{i = 2}^{${difficulty + 1}} \\max \\left( 1, q_i \\right)`}$ term to $\\dot{\\rho}$`,
+        reward: (difficulty) => `$${difficulty === 0 ? `$\\dot{\\rho}$ \\times 1` : `$\\dot{\\rho}$ \\times \\prod_{i = 2}^{${difficulty + 1}} \\max \\left( 1, q_i \\right)`}$`,
     },
     {
         maxDifficulty: 3,
@@ -167,14 +167,14 @@ var conjectures = [
         },
         penalty: (difficulty) => {
             if (difficulty === 1) {
-                return `$q_4$ is disabled. Softcap is stronger.`;
+                return `$q_4$ is disabled. Softcap $\\times 2$.`;
             } else if (difficulty === 2) {
-                return `$q_4$, $q_3$ are disabled. Softcap is stronger.`;
+                return `$q_4$, $q_3$ are disabled. Softcap $\\times 2$.`;
             } else {
-                return `$q_4$, $q_3$, $q_2$ are disabled. Softcap is stronger.`;
+                return `$q_4$, $q_3$, $q_2$ are disabled. Softcap $\\times 2$.`;
             }
         },
-        reward: (difficulty) => `Softcap is +$${conjectures[3].getRewardStr(difficulty)}$`,
+        reward: (difficulty) => `+$${conjectures[3].getRewardStr(difficulty)}$ Softcap`,
 
         onStart: (difficulty) => {
             if (difficulty >= 1) { dq4.maxLevel = 0; }
@@ -905,7 +905,7 @@ var getSecondaryEquation = () => {
     }
     else if (stage === 0) {
         theory.secondaryEquationHeight = 50;
-        theory.secondaryEquationScale = 1;
+        theory.secondaryEquationScale = 0.9;
 
         if (achievement1.isUnlocked) {
             let softcap = BigNumber.from(0.8 + conjectures[3].getReward(conjecturesHighestCompletedDifficulties[3]));
@@ -1221,15 +1221,15 @@ var createConjecturesMenu = () => {
                         horizontalTextAlignment: TextAlignment.CENTER,
                         verticalTextAlignment: TextAlignment.CENTER,
                         margin: new Thickness(0, -4, 0, 0),
-                        fontSize: 10,
+                        fontSize: 8,
                         textColor: Color.TEXT_MEDIUM,
-                        text: () => `Goal: ${conj.goal(nextDifficulty)}${currency.symbol}. ${conj.penalty(nextDifficulty)}`,
+                        text: () => `Goal: ${numberFormat(conj.goal(nextDifficulty), 2)}${currency.symbol}. ${conj.penalty(nextDifficulty)}`,
                     }),
                     ui.createLatexLabel({
                         horizontalTextAlignment: TextAlignment.CENTER,
                         verticalTextAlignment: TextAlignment.CENTER,
                         margin: new Thickness(0, -2, 0, 0),
-                        fontSize: 10,
+                        fontSize: 8,
                         textColor: Color.TEXT_MEDIUM,
                         text: () => {
                             let text = `Reward: ${conj.reward(completedDifficulty)}`;
