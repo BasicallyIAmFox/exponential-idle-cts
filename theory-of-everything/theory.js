@@ -155,7 +155,7 @@ var conjectures = [
             if (difficulty === 3) return BigNumber.from(3e16);
         },
         penalty: (difficulty) => `$q_1$ term in $\\dot{\\rho}$ is replaced with $q_${difficulty + 1}$`,
-        reward: (difficulty) => `${difficulty === 0 ? `$\\dot{\\rho} \\times 1$` : `$\\dot{\\rho} \\times \\prod_{i = 2}^{${difficulty + 1}} \\max \\left( 1, q_i \\right)$`}`,
+        reward: (difficulty) => difficulty === 0 ? `$\\dot{\\rho} \\times 1$` : `$\\dot{\\rho} \\times \\prod_{i = 2}^{${difficulty + 1}} \\max \\left( 1, q_i \\right)$`,
     },
     {
         maxDifficulty: 3,
@@ -1221,7 +1221,7 @@ var createConjecturesMenu = () => {
                         horizontalTextAlignment: TextAlignment.CENTER,
                         verticalTextAlignment: TextAlignment.CENTER,
                         margin: new Thickness(0, -4, 0, 0),
-                        fontSize: 9,
+                        fontSize: 10,
                         textColor: Color.TEXT_MEDIUM,
                         text: () => `Goal: ${numberFormat(conj.goal(nextDifficulty), 2)}${currency.symbol}. ${conj.penalty(nextDifficulty)}`,
                     }),
@@ -1229,7 +1229,7 @@ var createConjecturesMenu = () => {
                         horizontalTextAlignment: TextAlignment.CENTER,
                         verticalTextAlignment: TextAlignment.CENTER,
                         margin: new Thickness(0, -2, 0, 0),
-                        fontSize: 9,
+                        fontSize: 10,
                         textColor: Color.TEXT_MEDIUM,
                         text: () => {
                             let text = `Reward: ${conj.reward(completedDifficulty)}`;
