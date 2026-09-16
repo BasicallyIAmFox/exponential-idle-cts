@@ -152,7 +152,7 @@ var conjectures = [
         goal: (difficulty) => {
             if (difficulty === 1) return BigNumber.from(1e8);
             if (difficulty === 2) return BigNumber.from(1e10);
-            if (difficulty === 3) return BigNumber.from(1e11);
+            if (difficulty === 3) return BigNumber.from(3e16);
         },
         penalty: (difficulty) => `$q_1$ term in $\\dot{\\rho}$ is replaced with $q_${difficulty + 1}$`,
         reward: (difficulty) => `$${difficulty === 0 ? `1` : `\\prod_{i = 2}^{${difficulty + 1}} \\max \\left( 1, q_i \\right)`}$ term to $\\dot{\\rho}$`,
@@ -316,7 +316,25 @@ var init = () => {
     {
         let getDesc = (level) => `\\dot{q}_4 = ${getDQ4(level).toString(1)}`;
         let getInfo = (level) => `\\dot{q}_4 = ${getDQ4(level).toString(4)}`;
-        dq4 = theory.createUpgrade(3, currency, new ExponentialCost(8e18, Math.log2(2e8) / 2));
+        dq4 = theory.createUpgrade(3, currency, new (class {
+            constructor() {
+                this._defaultCostModel = new ExponentialCost(8e18, Math.log2(2e8) / 2);
+                this._conj3Diff3CostModel = new ExponentialCost(1.0001e10, Math.log2(2e8) / 2);
+            }
+
+            getCostModel() {
+                if (conjectureActiveData.id === 2) return this._conj3Diff3CostModel;
+                return this._defaultCostModel;
+            }
+
+            createCustomCostModel() {
+                return new CustomCost(
+                    (level) => this.getCostModel().getCost(level),
+                    (fromLevel, amount) => this.getCostModel().getSum(fromLevel, fromLevel + amount),
+                    (fromLevel, currency) => this.getCostModel().getMax(fromLevel, currency),
+                );
+            }
+        })().createCustomCostModel());
         dq4.getDescription = (_) => Utils.getMath(getDesc(dq4.level));
         dq4.getInfo = (amount) => Utils.getMathTo(getInfo(dq4.level), getInfo(dq4.level + amount));
         autobuyerConfigurationUpgradeMapper["q4"] = dq4;
@@ -718,7 +736,7 @@ var tick = (elapsedTime, multiplier) => {
 
     if (conjectureActiveData.id !== -1 && currency.value >= conjectures[conjectureActiveData.id].goal(conjectureActiveData.difficulty)) {
         conjecturesHighestCompletedDifficulties[conjectureActiveData.id] = conjectureActiveData.difficulty;
-        exitConjecture();
+        onGammaAdjustmentReset(false);
     }
 
     theory.invalidatePrimaryEquation();
