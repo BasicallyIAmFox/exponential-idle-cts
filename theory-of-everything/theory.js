@@ -10,7 +10,7 @@ var version = 0;
 
 var stage = 0;
 var localDeltaTime = BigNumber.ZERO;
-var achievement1, achievement2, achievement3, achievement5, achievement6, achievement4;
+var achievement1, achievement2, achievement3, achievement5, achievement4;
 
 var stringTickspeed = (value) => `\\text{Tickspeed} : \\text{${value}} \\text{ / sec}`;
 var t = BigNumber.ZERO;
@@ -529,8 +529,7 @@ var init = () => {
         achievement1 = theory.createAchievement(0, achievement_category1, "Achievements are the way to go", `Reach 1ρ, 1 q₁, or 1 q₂.\n\nReward: all production above 1 is powered by 0.8.`, () => currency.value >= 1 || q1 >= 1 || q2 >= 1);
         achievement2 = theory.createAchievement(1, achievement_category1, "No progress", `Let q₃ and q₄ fall below 0.001.\n\nReward: initial q₃ value is multiplied by 1.2.`, () => q3 < 0.001 && q4 < 0.001);
         achievement3 = theory.createAchievement(2, achievement_category1, "Decay was too strong", `Perform a gamma reset.\n\nReward: multiply γ gain by 2.`, () => gammaResets > 0);
-        achievement5 = theory.createAchievement(4, achievement_category1, "Full house", `Max out γ₄, γ₅, and γ₆.\n\nReward: unlock γ₇.`, () => gammaup_gammaDQ2Factor.level === gammaup_gammaDQ2Factor.maxLevel && gammaup_gammaQDecay.level === gammaup_gammaQDecay.maxLevel && gammaup_gammaGainExp.level === gammaup_gammaGainExp.maxLevel);
-        achievement6 = theory.createAchievement(5, achievement_category1, "Scaling!", `Max out γ₇.\n\nReward: unlock Conjectures.`, () => gammaup_gammaDQ1Scaling.level === gammaup_gammaDQ1Scaling.maxLevel);
+        achievement5 = theory.createAchievement(4, achievement_category1, "Full house", `Max out γ₄, γ₅, γ₆ and γ₇.\n\nReward: unlock Conjectures.`, () => gammaup_gammaDQ2Factor.level === gammaup_gammaDQ2Factor.maxLevel && gammaup_gammaQDecay.level === gammaup_gammaQDecay.maxLevel && gammaup_gammaGainExp.level === gammaup_gammaGainExp.maxLevel && gammaup_gammaDQ1Scaling.level === gammaup_gammaDQ1Scaling.maxLevel);
         achievement4 = theory.createAchievement(3, achievement_category1, "Big q family", `Let q₁, q₂, q₃ and q₄ all be above 1.`, () => q1 > 1 && q2 > 1 && q3 > 1 && q4 > 1);
     }
 
@@ -560,7 +559,7 @@ As you recheck all your calculations, you're shocked by what you see.
 A pattern.
 
 How could you not see it before? It was staring at you all this time.
-It seems like you'll be able to advance this theory after all.`, () => achievement6.isUnlocked);
+It seems like you'll be able to advance this theory after all.`, () => achievement5.isUnlocked);
     }
 
     updateAvailability();
@@ -587,8 +586,7 @@ var updateAvailability = () => {
     gammaup_gammaDQ2Factor.isAvailable = stage === 1;
     gammaup_gammaQDecay.isAvailable = stage === 1;
     gammaup_gammaGainExp.isAvailable = stage === 1;
-    gammaup_gammaDQ1Scaling.isAvailable = achievement5.isUnlocked && stage === 1;
-    gammaupsing_conjectures = achievement6.isUnlocked && stage === 1;
+    gammaup_gammaDQ1Scaling.isAvailable = stage === 1;
 };
 
 var getInternalState = () => JSON.stringify({
@@ -1022,7 +1020,7 @@ var getCurrencyBarDelegate = () => {
                 }
             }
         },
-        isVisible: () => achievement6.isUnlocked && stage === 1,
+        isVisible: () => achievement5.isUnlocked && stage === 1,
     });
 
     return ui.createStackLayout({
