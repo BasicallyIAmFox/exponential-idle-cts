@@ -2,15 +2,25 @@ var id = "theory_of_everything";
 var getName = (_) => {
     return `Theory of Everything`;
 };
-var getDescription = (_) => {
-    return `funny yact`;
+var getDescription = (language) => {
+    let descs = {
+        en:
+`You're the retired famous professor. One day, you've been invited to a party of your students.
+After the party, you've realized something: you gave up on math right after writing that famous equation.
+You had decided to take a look into a special theory named "Theory of Everything".
+Sure, it may be ambitious, but isn't that the point - to challenge yourself to your limits?
+
+In this theory, you'll find yourself limited by the very equation itself. Good luck!`
+    };
+
+    return descs[language] || descs.en;
 };
-var authors = "BasicallyIAmFox";
+var authors = "BasicallyIAmFox\n\nThanks to Python's Koala and Axiss for beta testing";
 var version = 0;
 
 var stage = 0;
 var localDeltaTime = BigNumber.ZERO;
-var achievement1, achievement2, achievement3, achievement5, achievement4;
+var achievement1, achievement2, achievement3, achievement5, achievement4, achievement6;
 
 var stringTickspeed = (value) => `\\text{Tickspeed} : \\text{${value}} \\text{ / sec}`;
 var t = BigNumber.ZERO;
@@ -29,7 +39,6 @@ var tickspeedConsts = [
 ];
 
 var currency;
-var maxRho = BigNumber.ZERO;
 
 // q variables
 const qBaseDecay = 100;
@@ -69,6 +78,8 @@ const gammaGainRhoThresholdStr = `1000`;
 var gammaCurrency;
 var gammaCurrencyTotal = BigNumber.ZERO;
 var gammaResets = 0;
+var gammaMaxRho = BigNumber.ZERO;
+var gammaMaxRhoLast = BigNumber.ZERO;
 var gammaup_gammaMult, gammaup_gammaTimeMult, gammaup_gammaTickspeed, gammaup_gammaDQ2Factor, gammaup_gammaQDecay, gammaup_gammaGainExp;
 var gammaup_gammaDQ1Scaling;
 var getGammaGainScaling = () => gammaGainBaseScaling + getGammaUpgGammaGainExp();
@@ -544,22 +555,23 @@ var init = () => {
 
     let achievement_category1 = theory.createAchievementCategory(0, "Progression");
     {
-        achievement1 = theory.createAchievement(0, achievement_category1, "Achievements are the way to go", `Reach 1ρ, 1 q₁, or 1 q₂.\n\nReward: all production above 1 is powered by 0.8.`, () => currency.value >= 1 || q1 >= 1 || q2 >= 1);
-        achievement2 = theory.createAchievement(1, achievement_category1, "No progress", `Let q₃ and q₄ fall below 0.001.\n\nReward: initial q₃ value is multiplied by 1.2.`, () => q3 < 0.001 && q4 < 0.001);
-        achievement3 = theory.createAchievement(2, achievement_category1, "Decay was too strong", `Perform a gamma reset.\n\nReward: multiply γ gain by 2.`, () => gammaResets > 0);
-        achievement5 = theory.createAchievement(4, achievement_category1, "Full house", `Max out γ₄, γ₅, γ₆ and γ₇.\n\nReward: unlock Conjectures.`, () => gammaup_gammaDQ2Factor.level === gammaup_gammaDQ2Factor.maxLevel && gammaup_gammaQDecay.level === gammaup_gammaQDecay.maxLevel && gammaup_gammaGainExp.level === gammaup_gammaGainExp.maxLevel && gammaup_gammaDQ1Scaling.level === gammaup_gammaDQ1Scaling.maxLevel);
-        achievement4 = theory.createAchievement(3, achievement_category1, "Big q family", `Let q₁, q₂, q₃ and q₄ all be above 1.`, () => q1 > 1 && q2 > 1 && q3 > 1 && q4 > 1);
+        achievement1 = theory.createAchievement(0, achievement_category1, "Achievements Are The Way to Go", `Reach 1ρ, 1 q₁, or 1 q₂.\n\nReward: all production above 1 is powered by 0.8.`, () => currency.value >= 1 || q1 >= 1 || q2 >= 1);
+        achievement2 = theory.createAchievement(1, achievement_category1, "No Progress", `Let q₃ and q₄ fall below 0.001.\n\nReward: initial q₃ value is multiplied by 1.2.`, () => q3 < 0.001 && q4 < 0.001);
+        achievement3 = theory.createAchievement(2, achievement_category1, "Decay Was Too Strong", `Perform a gamma reset.\n\nReward: multiply γ gain by 2.`, () => gammaResets > 0);
+        achievement5 = theory.createAchievement(4, achievement_category1, "Full House", `Max out γ₄, γ₅, γ₆ and γ₇.\n\nReward: unlock Conjectures.`, () => gammaup_gammaDQ2Factor.level === gammaup_gammaDQ2Factor.maxLevel && gammaup_gammaQDecay.level === gammaup_gammaQDecay.maxLevel && gammaup_gammaGainExp.level === gammaup_gammaGainExp.maxLevel && gammaup_gammaDQ1Scaling.level === gammaup_gammaDQ1Scaling.maxLevel);
+        achievement4 = theory.createAchievement(3, achievement_category1, "Big q Family", `Let q₁, q₂, q₃ and q₄ all be above 1.`, () => q1 > 1 && q2 > 1 && q3 > 1 && q4 > 1);
+        achievement6 = theory.createAchievement(5, achievement_category1, "Complete Proof", `Complete 12 Conjectures.\n\nReward: unlock τ.`, () => conjecturesHighestCompletedDifficulties[0] === 3 && conjecturesHighestCompletedDifficulties[1] === 3 && conjecturesHighestCompletedDifficulties[2] === 3 && conjecturesHighestCompletedDifficulties[3] === 3);
     }
 
     {
-        theory.createStoryChapter(0, "A Reminder from the Past", `You were, as they'd say, "chilling" at your very own house. You don't need to worry about anything at this point. The amount of money you got from that little equation from your golden days was enough to sustain you for the rest of your days.
+        theory.createStoryChapter(0, "A Reminder from the Past (1)", `You were, as they'd say, "chilling" at your very own house. You don't need to worry about anything at this point. The amount of money you got from that little equation from your golden days was enough to sustain you for the rest of your days.
 
 One day, a group of students that you once graduated decided to have a party specifically for you. You shared some stories, some laughs, food, and drinks.
 
 One student asked: "How did you come up with the now-famous equation? And why did you stop at that?" The one that made me filthy rich and brought together so many students in one place. You told them how and as you do that, you reminisced. Despite it being effectively a job that made you a lot of money, you enjoyed it.
-Yet, even you couldn't quite tell why you stopped there. Your students were flourishing, and they even had their own students... why couldn't you still do the same?
+Yet, even you couldn't quite tell why you stopped there. Your students were flourishing, and they even had their own students... why couldn't you still do the same?`, () => true);
 
-"Weierstrass Sine Product" by ███████, "Sequential Limits" by ████████, "Euler's Formula" by ██████, ████, and ██████, and "Convergents to √2" by ████████. Those were the projects your students had a hand in. Those were the projects they had researched to their limits.
+        theory.createStoryChapter(-1, "A Reminder from the Past (2)", `"Weierstrass Sine Product" by ███████, "Sequential Limits" by ████████, "Euler's Formula" by ██████, ████, and ██████, and "Convergents to √2" by ████████. Those were the projects your students had a hand in. Those were the projects they had researched to their limits.
 
 You may have retired, but that doesn't mean you can't dedicate a bit of yourself to something you enjoy just as much as you did with that equation, just as much as they did with their projects. It can be a hobby that you do on a lonely evening.
 
@@ -569,7 +581,7 @@ You had decided to be ambitious and look into the "Theory of Everything" as your
 Still, though, everything has been merely a refresher for your mind so far.
 
 You acknowledge that at this rate you'll soon start making no progress.
-You must adjust more constants for this to work out.`, () => maxRho >= 1000);
+You must adjust more constants for this to work out.`, () => gammaMaxRho >= 1000);
         
         theory.createStoryChapter(2, "A Burst", `After adjusting the constants enough, you begin to see something.
 As you recheck all your calculations, you're shocked by what you see.
@@ -578,6 +590,12 @@ A pattern.
 
 How could you not see it before? It was staring at you all this time.
 It seems like you'll be able to advance this theory after all.`, () => achievement5.isUnlocked);
+        
+        theory.createStoryChapter(3, "Hesitation", `You were able to prove all your Conjectures!
+Seems like all this effort won't go to waste.
+
+After being absent from the mathematical community for so long you can't help but wonder...
+What consequences will publishing a research on this theory have on your life, and the life of other mathematicians?`, () => achievement6.isUnlocked);
     }
 
     updateAvailability();
@@ -609,13 +627,14 @@ var updateAvailability = () => {
 
 var getInternalState = () => JSON.stringify({
     t: t.toBase64String(),
-    maxRho: maxRho.toBase64String(),
     q1: q1.toBase64String(),
     q2: q2.toBase64String(),
     q3: q3.toBase64String(),
     q4: q4.toBase64String(),
+
     gammaResets,
-    gammaCurrencyTotal: gammaCurrencyTotal.toBase64String(),
+    gammaMaxRho: gammaMaxRho.toBase64String(),
+    gammaMaxRhoLast: gammaMaxRhoLast.toBase64String(),
     conjectureActiveData,
     conjecturesHighestCompletedDifficulties,
     autobuyerConfiguration: autobuyerConfiguration,
@@ -625,16 +644,17 @@ var setInternalState = (stateStr) => {
     if (!stateStr) return;
     
     let state = JSON.parse(stateStr);
-    if (state.t) t = BigNumber.fromBase64String(state.t);
-    maxRho = BigNumber.fromBase64String(state.maxRho);
+    t = BigNumber.fromBase64String(state.t);
     q1 = BigNumber.fromBase64String(state.q1);
     q2 = BigNumber.fromBase64String(state.q2);
     q3 = BigNumber.fromBase64String(state.q3);
     q4 = BigNumber.fromBase64String(state.q4);
+
     gammaResets = state.gammaResets;
-    gammaCurrencyTotal = BigNumber.fromBase64String(state.gammaCurrencyTotal);
-    if (state.conjectureActiveData) conjectureActiveData = state.conjectureActiveData;
-    if (state.conjecturesHighestCompletedDifficulties) conjecturesHighestCompletedDifficulties = state.conjecturesHighestCompletedDifficulties;
+    if (state.gammaMaxRho) gammaMaxRho = BigNumber.fromBase64String(state.gammaMaxRho);
+    if (state.gammaMaxRhoLast) gammaMaxRhoLast = BigNumber.fromBase64String(state.gammaMaxRhoLast);
+    conjectureActiveData = state.conjectureActiveData;
+    conjecturesHighestCompletedDifficulties = state.conjecturesHighestCompletedDifficulties;
     autobuyerConfiguration = state.autobuyerConfiguration;
 };
 
@@ -704,8 +724,8 @@ var tick = (elapsedTime, multiplier) => {
         let rho_drho = calculateXDxSoftcapped(currency.value, drho * dt);
         currency.value = rho_drho[0]; drho = rho_drho[1];
         visual_drho = (currency.value - old_rho) / dt;
-        if (currency.value > maxRho) {
-            maxRho = currency.value;
+        if (currency.value > gammaMaxRho) {
+            gammaMaxRho = currency.value;
         }
 
         t += dt;
@@ -749,7 +769,6 @@ var onGammaAdjustmentReset = (soft) => {
     const dgamma = getGammaPending();
     if (dgamma > 0) {
         gammaCurrency.value += dgamma;
-        gammaCurrencyTotal += dgamma;
     }
     if (!soft) {
         gammaResets++;
@@ -775,7 +794,10 @@ var onGammaAdjustmentReset = (soft) => {
     autobuyerConfiguration.q4.autobuyTimer = autobuyerConfigurationCooldown.q4()[0];
 
     t = BigNumber.ZERO;
-    maxRho = BigNumber.ZERO;
+    if (!soft) {
+        gammaMaxRhoLast = gammaMaxRho;
+    }
+    gammaMaxRho = BigNumber.ZERO;
     theory.clearGraph();
 
     if (conjectureActiveData.id !== -1 && conjectures[conjectureActiveData.id].onEnd) {
@@ -788,7 +810,7 @@ var onGammaAdjustmentReset = (soft) => {
 var postPublish = () => {
 };
 
-var canResetStage = () => gammaResets < 1 && maxRho < 1000 || conjectureActiveData.id > -1;
+var canResetStage = () => gammaResets < 1 && gammaMaxRho < 1000 || conjectureActiveData.id > -1;
 var getResetStageMessage = () => `You can perform a reset when your ${currency.symbol} is stuck.`;
 var resetStage = () => {
     if (conjectureActiveData.id > -1) {
@@ -856,7 +878,7 @@ const gammaResetMenuFrame = createImageBtn({
     row: 0, column: 0,
     horizontalOptions: LayoutOptions.START,
     verticalOptions: LayoutOptions.START,
-    isVisible: () => gammaResets > 0 || maxRho >= 1000,
+    isVisible: () => gammaResets > 0 || gammaMaxRho >= 1000,
 }, () => createGammaResetMenu().show(), () => true, gammaResetImage);
 
 var getPrimaryEquation = () => {
@@ -924,6 +946,7 @@ var getSecondaryEquation = () => {
         theory.secondaryEquationScale = 1;
 
         result += `\\bar{\\rho} = \\max {\\rho}`;
+        if (achievement6.isUnlocked) result += `\\\\ ${theory.latexSymbol} = \\max {\\gamma^{0.4}}`;
     }
 
     result += `\\end{array}`
@@ -951,7 +974,7 @@ var getQuaternaryEntries = () => {
         entries.push(new QuaternaryEntry("t", t.toString(3)));
         entries.push(new QuaternaryEntry("d\\gamma", getGammaPending()));
         entries.push(new QuaternaryEntry("\\frac{d\\gamma}{t}", (getGammaPending() / t.max(0.1)).toString(3)));
-        entries.push(new QuaternaryEntry("\\bar{\\rho}", maxRho));
+        entries.push(new QuaternaryEntry("\\bar{\\rho}", gammaMaxRho));
     }
 
     return entries;
@@ -979,7 +1002,7 @@ var getCurrencyBarDelegate = () => {
                             text: () => `$${numberFormat(theory.tau, 2)}${theory.latexSymbol}$`,
                         }),
                     ],
-                    isVisible: () => false,
+                    isVisible: () => achievement6.isUnlocked,
                 }),
                 ui.createFrame({
                     column: 1,
@@ -1019,13 +1042,29 @@ var getCurrencyBarDelegate = () => {
     let conjecturesButton = ui.createFrame({
         heightRequest: 50,
         children: [
-            ui.createLatexLabel({
-                horizontalOptions: LayoutOptions.START,
-                horizontalTextAlignment: TextAlignment.START,
-                verticalTextAlignment: TextAlignment.CENTER,
-                margin: new Thickness(15, 0, 15, 0),
-                fontSize: 12,
-                text: () => conjectureActiveData.id > -1 ? `Exit ${conjectures[conjectureActiveData.id].name()}` : `Conjectures`,
+            ui.createGrid({
+                columnDefinitions: ["*", "*"],
+                columnSpacing: 0,
+                children: [
+                    ui.createLatexLabel({
+                        column: 0,
+                        horizontalOptions: LayoutOptions.START,
+                        horizontalTextAlignment: TextAlignment.START,
+                        verticalTextAlignment: TextAlignment.CENTER,
+                        margin: new Thickness(15, 0, 15, 0),
+                        fontSize: 12,
+                        text: () => conjectureActiveData.id > -1 ? `Exit ${conjectures[conjectureActiveData.id].name()}` : `Conjectures`,
+                    }),
+                    ui.createLatexLabel({
+                        column: 1,
+                        horizontalTextAlignment: TextAlignment.END,
+                        verticalTextAlignment: TextAlignment.END,
+                        margin: new Thickness(10, 0, 10, 6),
+                        fontSize: 10,
+                        textColor: Color.TEXT_MEDIUM,
+                        text: () => conjectureActiveData.id > -1 ? `Goal: $${numberFormat(conjectures[conjectureActiveData.id].goal(conjectureActiveData.difficulty), 2)}$${currency.symbol}` : `Completed: ${conjecturesHighestCompletedDifficulties[0] + conjecturesHighestCompletedDifficulties[1] + conjecturesHighestCompletedDifficulties[2] + conjecturesHighestCompletedDifficulties[3]}/${conjectures[0].maxDifficulty + conjectures[1].maxDifficulty + conjectures[2].maxDifficulty + conjectures[3].maxDifficulty}`,
+                    }),
+                ],
             }),
         ],
         onTouched: (e) => {
@@ -1082,7 +1121,7 @@ var getEquationOverlay = () => {
                         verticalOptions: LayoutOptions.START,
                         children: [
                             ui.createProgressBar({
-                                progress: () => conjectureActiveData.id > -1 ? Math.min(((1 + maxRho).log10() / conjectures[conjectureActiveData.id].goal(conjectureActiveData.difficulty).log10()).toNumber(), 1) : 0,
+                                progress: () => conjectureActiveData.id > -1 ? Math.min(((1 + gammaMaxRho).log10() / conjectures[conjectureActiveData.id].goal(conjectureActiveData.difficulty).log10()).toNumber(), 1) : 0,
                             }),
                         ],
                         isVisible: () => conjectureActiveData.id > -1,
@@ -1095,6 +1134,7 @@ var getEquationOverlay = () => {
 
 var createGammaResetMenu = () => {
     let resetButton = ui.createButton({
+        margin: new Thickness(0, 10, 0, 0),
         text: `Reset`,
         onClicked: () => {
             let yesButton = ui.createButton({
@@ -1146,7 +1186,7 @@ var createGammaResetMenu = () => {
     let resetChildren = [
         ui.createLatexLabel({
             horizontalTextAlignment: TextAlignment.CENTER,
-            text: `After you perform $\\Gamma$ Adjustment Reset, you will have:`,
+            text: `After you perform Gamma Adjustment Reset, you will have:`,
         }),
         ui.createGrid({
             rowDefinitions: ["*", "*"],
@@ -1171,7 +1211,7 @@ var createGammaResetMenu = () => {
                 ui.createLatexLabel({
                     row: 1, column: 1,
                     horizontalTextAlignment: TextAlignment.CENTER,
-                    text: () => `$${gammaCurrency.value}$ + $${getGammaPending(maxRho)}$`,
+                    text: () => `$${gammaCurrency.value + getGammaPending(gammaMaxRho)}$`,
                 }),
             ],
         }),
@@ -1183,6 +1223,12 @@ var createGammaResetMenu = () => {
             horizontalTextAlignment: TextAlignment.CENTER,
             text: `You will also leave your current Conjecture.`,
             isVisible: () => conjectureActiveData.id > -1
+        }),
+        ui.createLatexLabel({
+            horizontalTextAlignment: TextAlignment.CENTER,
+            margin: new Thickness(0, 10, 0, 0),
+            text: `Your $\\bar{\\rho}$ last reset: ${gammaMaxRhoLast}.`,
+            isVisible: () => gammaResets > 0,
         }),
         resetButton,
     ];
@@ -1337,9 +1383,9 @@ var goToNextStage = () => {
 };
 
 var isCurrencyVisible = (index) => index === 0;
-var getTau = () => BigNumber.ZERO;
+var getTau = () => achievement6.isUnlocked ? gammaCurrency.value.pow(0.4) : BigNumber.ZERO;
 var getPublicationMultiplier = (tau) => BigNumber.ONE;
-var getPublicationMultiplierFormula = (symbol) => `\\text{There is no resolution.}`;
+var getPublicationMultiplierFormula = (symbol) => `\\Pi = 1`;
 var get2DGraphValue = () => currency.value.sign * (BigNumber.ONE + currency.value.abs()).log10().toNumber();
 
 //
@@ -1353,7 +1399,7 @@ var getDQ2 = (level = dq2.level) => Utils.getStepwisePowerSum(level, 2, 9, 0) / 
 var getDQ3 = (level = dq3.level) => Utils.getStepwisePowerSum(level, 2, 9, 0) / 10;
 var getDQ4 = (level = dq4.level) => Utils.getStepwisePowerSum(level, 2, 9, 0) / 10;
 
-var getGammaPending = (rho = maxRho) => {
+var getGammaPending = (rho = gammaMaxRho) => {
     if (conjectureActiveData.id > -1) return BigNumber.ZERO;
 
     const threshold = getGammaGainRhoThreshold();
