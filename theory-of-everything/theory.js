@@ -354,18 +354,6 @@ var init = () => {
     {
         theory.createBuyAllUpgrade(0, currency, 10000);
     }
-    {
-        let getDesc = (level) => {
-            let result = `n_t = ${level}`;
-            if (gammaup_gammaTickspeed.level > 0) result += ` + \\gamma_3`;
-            return result;
-        };
-        let getInfo = (level) => `n_t = ${getTn(level)}`;
-        tickspeed = theory.createPermanentUpgrade(3, currency, new ExponentialCost(2, Math.log2(80)));
-        tickspeed.getDescription = (_) => Utils.getMath(getDesc(tickspeed.level));
-        tickspeed.getInfo = (amount) => Utils.getMathTo(getInfo(tickspeed.level), getInfo(tickspeed.level + amount));
-        tickspeed.maxLevel = 4;
-    }
     
     {
         let getDesc = (level) => {
@@ -411,7 +399,7 @@ var init = () => {
         gammaup_gammaTickspeed = theory.createUpgrade(19, gammaCurrency, new ExponentialCost(3, Math.log2(14.5)));
         gammaup_gammaTickspeed.getDescription = (_) => Utils.getMath(getDesc(gammaup_gammaTickspeed.level));
         gammaup_gammaTickspeed.getInfo = (amount) => Utils.getMathTo(getInfo(gammaup_gammaTickspeed.level), getInfo(gammaup_gammaTickspeed.level + amount));
-        gammaup_gammaTickspeed.maxLevel = tickspeedConsts.length - tickspeed.maxLevel - 1;
+        gammaup_gammaTickspeed.maxLevel = 5;
     }
     {
         let getDesc = (level) => {
@@ -471,7 +459,7 @@ var init = () => {
     }
 
     {
-        autobuyerUnlock = theory.createUpgrade(11, currency, new ConstantCost(1e6));
+        autobuyerUnlock = theory.createPermanentUpgrade(11, currency, new ConstantCost(1e6));
         autobuyerUnlock.description = Localization.getUpgradeAutoBuyerDesc();
         autobuyerUnlock.info = `Allows to automatically purchase theory upgrades`;
         autobuyerUnlock.maxLevel = 1;
@@ -485,7 +473,7 @@ var init = () => {
         };
     }
     {
-        autobuyerUnlockDQ1 = theory.createUpgrade(13, gammaCurrency, new ConstantCost(20));
+        autobuyerUnlockDQ1 = theory.createPermanentUpgrade(13, gammaCurrency, new ConstantCost(20));
         autobuyerUnlockDQ1.description = `Unlock $\\dot{q_1}$ auto-buyer`;
         autobuyerUnlockDQ1.info = `Allows to automatically purchase $\\dot{q_1}$`;
         autobuyerUnlockDQ1.maxLevel = 1;
@@ -508,7 +496,7 @@ var init = () => {
         autobuyerDQ1Bulk.getInfo = (amount) => Utils.getMathTo(getBulkInfo(autobuyerDQ1Bulk.level), getBulkInfo(autobuyerDQ1Bulk.level + amount));
     }
     {
-        autobuyerUnlockDQ2 = theory.createUpgrade(15, gammaCurrency, new ConstantCost(30));
+        autobuyerUnlockDQ2 = theory.createPermanentUpgrade(15, gammaCurrency, new ConstantCost(30));
         autobuyerUnlockDQ2.description = `Unlock $\\dot{q_2}$ auto-buyer`;
         autobuyerUnlockDQ2.info = `Allows to automatically purchase $\\dot{q_2}$`;
         autobuyerUnlockDQ2.maxLevel = 1;
@@ -531,7 +519,7 @@ var init = () => {
         autobuyerDQ2Bulk.getInfo = (amount) => Utils.getMathTo(getBulkInfo(autobuyerDQ2Bulk.level), getBulkInfo(autobuyerDQ2Bulk.level + amount));
     }
     {
-        autobuyerUnlockDQ3 = theory.createUpgrade(23, gammaCurrency, new ConstantCost(2000));
+        autobuyerUnlockDQ3 = theory.createPermanentUpgrade(23, gammaCurrency, new ConstantCost(2000));
         autobuyerUnlockDQ3.description = `Unlock $\\dot{q_3}$ auto-buyer`;
         autobuyerUnlockDQ3.info = `Allows to automatically purchase $\\dot{q_3}$`;
         autobuyerUnlockDQ3.maxLevel = 1;
@@ -554,7 +542,7 @@ var init = () => {
         autobuyerDQ3Bulk.getInfo = (amount) => Utils.getMathTo(getBulkInfo(autobuyerDQ3Bulk.level), getBulkInfo(autobuyerDQ3Bulk.level + amount));
     }
     {
-        autobuyerUnlockDQ4 = theory.createUpgrade(28, gammaCurrency, new ConstantCost(1e12));
+        autobuyerUnlockDQ4 = theory.createPermanentUpgrade(28, gammaCurrency, new ConstantCost(1e12));
         autobuyerUnlockDQ4.description = `Unlock $\\dot{q_4}$ auto-buyer`;
         autobuyerUnlockDQ4.info = `Allows to automatically purchase $\\dot{q_4}$`;
         autobuyerUnlockDQ4.maxLevel = 1;
@@ -575,6 +563,19 @@ var init = () => {
         autobuyerDQ4Bulk = theory.createUpgrade(30, gammaCurrency, new ExponentialCost(3e11, Math.log2(40)));
         autobuyerDQ4Bulk.getDescription = (_) => Utils.getMath(getBulkDesc(autobuyerDQ4Bulk.level));
         autobuyerDQ4Bulk.getInfo = (amount) => Utils.getMathTo(getBulkInfo(autobuyerDQ4Bulk.level), getBulkInfo(autobuyerDQ4Bulk.level + amount));
+    }
+
+    {
+        let getDesc = (level) => {
+            let result = `n_t = ${level}`;
+            if (gammaup_gammaTickspeed.level > 0) result += ` + \\gamma_3`;
+            return result;
+        };
+        let getInfo = (level) => `n_t = ${getTn(level)}`;
+        tickspeed = theory.createPermanentUpgrade(3, currency, new ExponentialCost(2, Math.log2(80)));
+        tickspeed.getDescription = (_) => Utils.getMath(getDesc(tickspeed.level));
+        tickspeed.getInfo = (amount) => Utils.getMathTo(getInfo(tickspeed.level), getInfo(tickspeed.level + amount));
+        tickspeed.maxLevel = 4;
     }
 
     let achievement_category1 = theory.createAchievementCategory(0, "Progression");
@@ -626,15 +627,12 @@ What consequences will publishing a research on this theory have on your life, a
 };
 
 var updateAvailability = () => {
-    autobuyerUnlock.isAvailable = stage === -1 && autobuyerUnlock.level < 1;
+    autobuyerUnlock.isAvailable = stage === -1;
     autobuyEnabled.isAvailable = stage === -1 && autobuyerUnlock.level > 0;
-    autobuyerUnlockDQ1.isAvailable = autobuyEnabled.isAvailable && autobuyerUnlockDQ1.level < 1;
+    autobuyerUnlockDQ1.isAvailable = autobuyerUnlockDQ2.isAvailable = autobuyerUnlockDQ3.isAvailable = autobuyerUnlockDQ4.isAvailable = autobuyerUnlock.level > 0;
     autobuyerDQ1Rate.isAvailable = autobuyerDQ1Bulk.isAvailable = autobuyEnabled.isAvailable && autobuyerUnlockDQ1.level > 0;
-    autobuyerUnlockDQ2.isAvailable = autobuyEnabled.isAvailable && autobuyerUnlockDQ2.level < 1;
     autobuyerDQ2Rate.isAvailable = autobuyerDQ2Bulk.isAvailable = autobuyEnabled.isAvailable && autobuyerUnlockDQ2.level > 0;
-    autobuyerUnlockDQ3.isAvailable = autobuyEnabled.isAvailable && autobuyerUnlockDQ3.level < 1;
     autobuyerDQ3Rate.isAvailable = autobuyerDQ3Bulk.isAvailable = autobuyEnabled.isAvailable && autobuyerUnlockDQ3.level > 0;
-    autobuyerUnlockDQ4.isAvailable = autobuyEnabled.isAvailable && autobuyerUnlockDQ4.level < 1;
     autobuyerDQ4Rate.isAvailable = autobuyerDQ4Bulk.isAvailable = autobuyEnabled.isAvailable && autobuyerUnlockDQ4.level > 0;
 
     dq1.isAvailable = stage === 0;
