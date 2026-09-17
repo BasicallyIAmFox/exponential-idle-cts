@@ -419,7 +419,7 @@ var init = () => {
     }
     {
         let getDesc = (level) => {
-            let base = `\\gamma_5 = 2 \\times ${level}`;
+            let base = `\\gamma_5 = ${2 * level}`;
             if (level === 0) base = `\\text{Add } \\gamma_5 \\text{ term to all } \\dot{q} \\text{ decay} ; \\text{ } ${base}`;
             return base;
         };
@@ -434,7 +434,7 @@ var init = () => {
         gammaup_gammaQDecay.maxLevel = 5;
     }
     {
-        let getDesc = (level) => `\\gamma_6 = 0.04 \\times ${level}`;
+        let getDesc = (level) => `\\gamma_6 = ${BigNumber.from(0.04 * level)}`;
         let getInfo = (level) => `\\gamma_6 = ${getGammaUpgGammaGainExp(level)}`;
         gammaup_gammaGainExp = theory.createUpgrade(18, gammaCurrency, new ExponentialCost(10, Math.log2(3)));
         gammaup_gammaGainExp.getDescription = (_) => Utils.getMath(getDesc(gammaup_gammaGainExp.level));
@@ -443,7 +443,7 @@ var init = () => {
     }
     {
         let getDesc = (level) => {
-            let base = `\\gamma_7 = 0.1 \\times ${level}`;
+            let base = `\\gamma_7 = ${(0.1 * level).toFixed(1)}`;
             if (level === 0) base = `\\text{Add } \\gamma_7 \\text{ term to } \\dot{q_1} \\text{ doubling base} \\\\ ${base}`;
             return base;
         };
