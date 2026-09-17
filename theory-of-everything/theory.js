@@ -628,7 +628,6 @@ What consequences will publishing a research on this theory have on your life, a
 };
 
 var updateAvailability = () => {
-    autobuyerUnlock.isAvailable = stage === -1;
     autobuyEnabled.isAvailable = stage === -1 && autobuyerUnlock.level > 0;
     autobuyerUnlockDQ1.isAvailable = autobuyerUnlockDQ2.isAvailable = autobuyerUnlockDQ3.isAvailable = autobuyerUnlockDQ4.isAvailable = autobuyerUnlock.level > 0;
     autobuyerDQ1Rate.isAvailable = autobuyerDQ1Bulk.isAvailable = autobuyEnabled.isAvailable && autobuyerUnlockDQ1.level > 0;
