@@ -61,8 +61,9 @@ var getQDecay = () => {
 };
 var getQDecayLatex = () => {
     let result = qBaseDecayStr;
-    if (gammaup_gammaQDecay.level > 0) result = `${result} + \\gamma_5`;
 
+    if (gammaup_gammaQDecay.level > 0) result = `${result} + \\gamma_5`;
+    
     if (conjecturesHighestCompletedDifficulties[0] > 0) {
         result = `${conjectures[0].getRewardStr(conjecturesHighestCompletedDifficulties[0])} (${result})`;
     }
