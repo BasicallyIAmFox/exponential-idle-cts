@@ -249,45 +249,33 @@ var autobuyerConfigurationCooldown = {
     ["q4"]: () => [2 - 0.1 * autobuyerDQ4Rate.level, autobuyerDQ4Bulk.level + 1],
 };
 
-var numberFormat = (value, decimals, negExpFlag=false) => {
-    if (value >= BigNumber.ZERO)
-    {
-        if (value >= BigNumber.from(0.1) || value == BigNumber.ZERO) 
-        {
-            if (value > BigNumber.ZERO && value < BigNumber.ONE && decimals < 3)
-            {
+// Stolen from MF
+var numberFormat = (value, decimals, negExpFlag = false) => {
+    if (value >= BigNumber.ZERO) {
+        if (value >= BigNumber.from(0.1) || value == BigNumber.ZERO)  {
+            if (value > BigNumber.ZERO && value < BigNumber.ONE && decimals < 3) {
                 return value.toString(3);
             }
             return value.toString(decimals);
-        }
-        else
-        {
-            let exp = Math.floor((value*BigNumber.from(1+1e-5)).log10().toNumber());
+        } else {
+            let exp = Math.floor((value * BigNumber.from(1 + 1e-5)).log10().toNumber());
             let mts = (value * BigNumber.TEN.pow(-exp)).toString(decimals);
             if (mts.startsWith('10')) { // Edge case when mantissa rounds up to 10
                 mts = (value * BigNumber.TEN.pow(-exp) / 10).toString(decimals)
                 exp++;
             }
-            if (exp > 0 || !negExpFlag)
-            {
+            if (exp > 0 || !negExpFlag) {
                 return `${mts}e${exp}`;
-            }
-            else
-            {
+            } else {
                 return `${mts}e$\\,-$${-exp}`;
             }
         }
-    }
-    else
-    {
+    } else {
         value = -value;
-        if (value >= BigNumber.from(0.1) || value == BigNumber.ZERO) 
-        {
+        if (value >= BigNumber.from(0.1) || value == BigNumber.ZERO)  {
             return (-value).toString(decimals);
-        }
-        else
-        {
-            let exp = Math.floor((value*BigNumber.from(1+1e-5)).log10().toNumber());
+        } else {
+            let exp = Math.floor((value * BigNumber.from(1 + 1e-5)).log10().toNumber());
             let mts = (value * BigNumber.TEN.pow(-exp)).toString(decimals);
             return `-${mts}e${exp}`;
         }
@@ -603,7 +591,7 @@ You may have retired, but that doesn't mean you can't dedicate a bit of yourself
 
 You had decided to be ambitious and look into the "Theory of Everything" as your first candidate.`, () => true);
 
-        theory.createStoryChapter(1, "Underestimation", `You've underestimated this theory. Maybe it wasn't the greatest pick as you thought initially.
+        theory.createStoryChapter(1, "Adjustment", `You've underestimated this theory. Maybe it wasn't the greatest pick as you thought initially.
 Still, though, everything has been merely a refresher for your mind so far.
 
 You acknowledge that at this rate you'll soon start making no progress.
