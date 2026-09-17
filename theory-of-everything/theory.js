@@ -704,10 +704,10 @@ var tick = (elapsedTime, multiplier) => {
         let q3_cap = calculateQCap(q3, dq3, q_decay);
         let q4_cap = calculateQCap(q4, dq4, q_decay);
 
-        let production_dq1 = (calculateXDxSoftcapped(q1, dq1)[0] - q1 - q1 / q_decay) * dt;
-        let production_dq2 = (calculateXDxSoftcapped(q2, dq2)[0] - q2 - q2 / q_decay) * dt;
-        let production_dq3 = (calculateXDxSoftcapped(q3, dq3)[0] - q3 - q3 / q_decay) * dt;
-        let production_dq4 = (calculateXDxSoftcapped(q4, dq4)[0] - q4 - q4 / q_decay) * dt;
+        let production_dq1 = (calculateXDxSoftcapped(q1, dq1) - q1 - q1 / q_decay) * dt;
+        let production_dq2 = (calculateXDxSoftcapped(q2, dq2) - q2 - q2 / q_decay) * dt;
+        let production_dq3 = (calculateXDxSoftcapped(q3, dq3) - q3 - q3 / q_decay) * dt;
+        let production_dq4 = (calculateXDxSoftcapped(q4, dq4) - q4 - q4 / q_decay) * dt;
         if (q1 < q1_cap && q1 + production_dq1 >= q1_cap) production_dq1 = q1_cap - q1;
         if (q2 < q2_cap && q2 + production_dq1 >= q2_cap) production_dq2 = q2_cap - q2;
         if (q3 < q3_cap && q3 + production_dq1 >= q3_cap) production_dq3 = q3_cap - q3;
@@ -729,7 +729,7 @@ var tick = (elapsedTime, multiplier) => {
             if (conjecturesHighestCompletedDifficulties[2] > 2) drho *= q4.max(BigNumber.ONE);
         }
 
-        let production_drho = (calculateXDxSoftcapped(currency.value, drho)[0] - currency.value) * dt;
+        let production_drho = (calculateXDxSoftcapped(currency.value, drho) - currency.value) * dt;
         visual_drho = production_drho; currency.value += production_drho;
         if (currency.value > gammaMaxRho) {
             gammaMaxRho = currency.value;
@@ -1463,19 +1463,16 @@ let calculateQCap = (q, dq, qDecay) => {
 };
 
 var calculateXDxSoftcapped = (x, dx, initialThreshold = BigNumber.ONE, apply = [productionSoftcap, productionSoftcapInverse]) => {
+    let new_x;
     if (x < initialThreshold) {
-        let new_x = x + dx;
+        new_x = x + dx;
         if (new_x >= initialThreshold) {
             new_x = apply[0](new_x / initialThreshold) * initialThreshold;
         }
-        dx = new_x - x;
-        x = new_x;
     } else {
-        const new_x = apply[0](apply[1](x / initialThreshold) + dx / initialThreshold) * initialThreshold;
-        dx = new_x - x;
-        x = new_x;
+        new_x = apply[0](apply[1](x / initialThreshold) + dx / initialThreshold) * initialThreshold;
     }
-    return [x, dx];
+    return new_x;
 };
 
 init();
