@@ -605,11 +605,13 @@ A pattern.
 How could you not see it before? It was staring at you all this time.
 It seems like you'll be able to advance this theory after all.`, () => achievement5.isUnlocked);
         
-        theory.createStoryChapter(3, "Hesitation", `You were able to prove all your Conjectures!
+        theory.createStoryChapter(3, "Confidence", `You were able to prove all your Conjectures!
 Seems like all this effort won't go to waste.
 
 After being absent from the mathematical community for so long you can't help but wonder...
-What consequences will publishing a research on this theory have on your life, and the life of other mathematicians?`, () => achievement6.isUnlocked);
+What consequences will publishing a research on this theory have on your life, and the life of other mathematicians?
+
+Regardless of the answer, you're ready to Publish.`, () => achievement6.isUnlocked);
     }
 
     updateAvailability();
