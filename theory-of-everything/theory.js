@@ -233,6 +233,7 @@ var autobuyerUnlock, autobuyEnabled;
 var autobuyerUnlockDQ1, autobuyerDQ1Rate, autobuyerDQ1Bulk;
 var autobuyerUnlockDQ2, autobuyerDQ2Rate, autobuyerDQ2Bulk;
 var autobuyerUnlockDQ3, autobuyerDQ3Rate, autobuyerDQ3Bulk;
+var autobuyerUnlockDQ4, autobuyerDQ4Rate, autobuyerDQ4Bulk;
 var autobuyerConfigurationUpgradeMapper = { };
 var autobuyerConfiguration = {
     ["q1"]: { autobuyTimer: 999, },
@@ -244,7 +245,7 @@ var autobuyerConfigurationCooldown = {
     ["q1"]: () => [2 - 0.1 * autobuyerDQ1Rate.level, autobuyerDQ1Bulk.level + 1],
     ["q2"]: () => [2 - 0.1 * autobuyerDQ2Rate.level, autobuyerDQ2Bulk.level + 1],
     ["q3"]: () => [2 - 0.1 * autobuyerDQ3Rate.level, autobuyerDQ3Bulk.level + 1],
-    ["q4"]: () => [2, 1],
+    ["q4"]: () => [2 - 0.1 * autobuyerDQ4Rate.level, autobuyerDQ4Bulk.level + 1],
 };
 
 var numberFormat = (value, decimals, negExpFlag=false) => {
@@ -502,7 +503,7 @@ var init = () => {
         
         let getBulkDesc = (level) => `\\dot{q_1} \\text{ Buy/Automation} = ${level + 1}`;
         let getBulkInfo = (level) => `\\dot{q_1} \\text{ Buy/Automation} = ${level + 1}`;
-        autobuyerDQ1Bulk = theory.createUpgrade(26, gammaCurrency, new ExponentialCost(25, 2));
+        autobuyerDQ1Bulk = theory.createUpgrade(26, gammaCurrency, new ExponentialCost(25, Math.log2(20)));
         autobuyerDQ1Bulk.getDescription = (_) => Utils.getMath(getBulkDesc(autobuyerDQ1Bulk.level));
         autobuyerDQ1Bulk.getInfo = (amount) => Utils.getMathTo(getBulkInfo(autobuyerDQ1Bulk.level), getBulkInfo(autobuyerDQ1Bulk.level + amount));
     }
@@ -525,7 +526,7 @@ var init = () => {
         
         let getBulkDesc = (level) => `\\dot{q_2} \\text{ Buy/Automation} = ${level + 1}`;
         let getBulkInfo = (level) => `\\dot{q_2} \\text{ Buy/Automation} = ${level + 1}`;
-        autobuyerDQ2Bulk = theory.createUpgrade(27, gammaCurrency, new ExponentialCost(37.5, 2.5));
+        autobuyerDQ2Bulk = theory.createUpgrade(27, gammaCurrency, new ExponentialCost(37.5, Math.log2(25)));
         autobuyerDQ2Bulk.getDescription = (_) => Utils.getMath(getBulkDesc(autobuyerDQ2Bulk.level));
         autobuyerDQ2Bulk.getInfo = (amount) => Utils.getMathTo(getBulkInfo(autobuyerDQ2Bulk.level), getBulkInfo(autobuyerDQ2Bulk.level + amount));
     }
@@ -548,9 +549,32 @@ var init = () => {
         
         let getBulkDesc = (level) => `\\dot{q_3} \\text{ Buy/Automation} = ${level + 1}`;
         let getBulkInfo = (level) => `\\dot{q_3} \\text{ Buy/Automation} = ${level + 1}`;
-        autobuyerDQ3Bulk = theory.createUpgrade(25, gammaCurrency, new ExponentialCost(1000, 3));
+        autobuyerDQ3Bulk = theory.createUpgrade(25, gammaCurrency, new ExponentialCost(1000, Math.log2(30)));
         autobuyerDQ3Bulk.getDescription = (_) => Utils.getMath(getBulkDesc(autobuyerDQ3Bulk.level));
         autobuyerDQ3Bulk.getInfo = (amount) => Utils.getMathTo(getBulkInfo(autobuyerDQ3Bulk.level), getBulkInfo(autobuyerDQ3Bulk.level + amount));
+    }
+    {
+        autobuyerUnlockDQ4 = theory.createUpgrade(28, gammaCurrency, new ConstantCost(1e12));
+        autobuyerUnlockDQ4.description = `Unlock $\\dot{q_4}$ auto-buyer`;
+        autobuyerUnlockDQ4.info = `Allows to automatically purchase $\\dot{q_4}$`;
+        autobuyerUnlockDQ4.maxLevel = 1;
+        autobuyerUnlockDQ4.bought = (_) => {
+            autobuyerConfiguration.q4.enabled = true;
+            updateAvailability();
+        };
+        
+        let getRateDesc = (level) => `\\dot{q_4} \\text{ Automation/s} = 2 - 0.1 \\times ${level}`;
+        let getRateInfo = (level) => `\\dot{q_4} \\text{ Automation/s} = ${BigNumber.from(2 - 0.1 * level)}`;
+        autobuyerDQ4Rate = theory.createUpgrade(29, gammaCurrency, new ExponentialCost(2e11, 1.2));
+        autobuyerDQ4Rate.getDescription = (_) => Utils.getMath(getRateDesc(autobuyerDQ4Rate.level));
+        autobuyerDQ4Rate.getInfo = (amount) => Utils.getMathTo(getRateInfo(autobuyerDQ4Rate.level), getRateInfo(autobuyerDQ4Rate.level + amount));
+        autobuyerDQ4Rate.maxLevel = 19;
+        
+        let getBulkDesc = (level) => `\\dot{q_4} \\text{ Buy/Automation} = ${level + 1}`;
+        let getBulkInfo = (level) => `\\dot{q_4} \\text{ Buy/Automation} = ${level + 1}`;
+        autobuyerDQ4Bulk = theory.createUpgrade(30, gammaCurrency, new ExponentialCost(3e11, Math.log2(40)));
+        autobuyerDQ4Bulk.getDescription = (_) => Utils.getMath(getBulkDesc(autobuyerDQ4Bulk.level));
+        autobuyerDQ4Bulk.getInfo = (amount) => Utils.getMathTo(getBulkInfo(autobuyerDQ4Bulk.level), getBulkInfo(autobuyerDQ4Bulk.level + amount));
     }
 
     let achievement_category1 = theory.createAchievementCategory(0, "Progression");
@@ -610,6 +634,8 @@ var updateAvailability = () => {
     autobuyerDQ2Rate.isAvailable = autobuyerDQ2Bulk.isAvailable = autobuyEnabled.isAvailable && autobuyerUnlockDQ2.level > 0;
     autobuyerUnlockDQ3.isAvailable = autobuyEnabled.isAvailable && autobuyerUnlockDQ3.level < 1;
     autobuyerDQ3Rate.isAvailable = autobuyerDQ3Bulk.isAvailable = autobuyEnabled.isAvailable && autobuyerUnlockDQ3.level > 0;
+    autobuyerUnlockDQ4.isAvailable = autobuyEnabled.isAvailable && autobuyerUnlockDQ4.level < 1;
+    autobuyerDQ4Rate.isAvailable = autobuyerDQ4Bulk.isAvailable = autobuyEnabled.isAvailable && autobuyerUnlockDQ4.level > 0;
 
     dq1.isAvailable = stage === 0;
     dq2.isAvailable = stage === 0;
@@ -669,46 +695,28 @@ var tick = (elapsedTime, multiplier) => {
     if (dq1.level > 0) {
         let q_decay = getQDecay();
 
-        // The decay term should be outside softcap operation
-        /*let q_scale = BigNumber.ONE - BigNumber.E.pow(-dt / q_decay);
-        if (q_scale < 1e-13) q_scale = dt / q_decay;
-
-        let baseDQ4 = getDQ4();
-        let q4_dq4 = calculateXDxSoftcapped(q4, q_scale * (baseDQ4 * q_decay - q4));
-        q4 = q4_dq4[0].max(BigNumber.ZERO); visual_dq4 = q4_dq4[1] / dt;
-
-        let baseDQ3 = getDQ3() * q4;
-        let q3_dq3 = calculateXDxSoftcapped(q3, q_scale * (baseDQ3 * q_decay - q3));
-        q3 = q3_dq3[0].max(BigNumber.ZERO); visual_dq3 = q3_dq3[1] / dt;
-
-        let baseDQ2 = getDQ2() * getGammaUpgGammaDQ2Factor() * q3;
-        let q2_dq2 = calculateXDxSoftcapped(q2, q_scale * (baseDQ2 * q_decay - q2));
-        q2 = q2_dq2[0].max(BigNumber.ZERO); visual_dq2 = q2_dq2[1] / dt;
-
-        let baseDQ1 = getDQ1() * q2;
-        let q1_dq1 = calculateXDxSoftcapped(q1, q_scale * (baseDQ1 * q_decay - q1));
-        q1 = q1_dq1[0].max(BigNumber.ZERO); visual_dq1 = q1_dq1[1] / dt;*/
-
-        let old_q1 = q1, old_q2 = q2, old_q3 = q3, old_q4 = q4;
         let dq1 = getDQ1() * q2;
         let dq2 = getDQ2() * getGammaUpgGammaDQ2Factor() * q3;
         let dq3 = getDQ3() * q4;
         let dq4 = getDQ4();
+        let q1_cap = calculateQCap(q1, dq1, q_decay);
+        let q2_cap = calculateQCap(q2, dq2, q_decay);
+        let q3_cap = calculateQCap(q3, dq3, q_decay);
+        let q4_cap = calculateQCap(q4, dq4, q_decay);
 
-        let q1_dq1 = calculateXDxSoftcapped(q1, dq1 * dt);
-        let q2_dq2 = calculateXDxSoftcapped(q2, dq2 * dt);
-        let q3_dq3 = calculateXDxSoftcapped(q3, dq3 * dt);
-        let q4_dq4 = calculateXDxSoftcapped(q4, dq4 * dt);
-        q1 = (q1_dq1[0] - q1 / q_decay * dt).max(BigNumber.ZERO);
-        q2 = (q2_dq2[0] - q2 / q_decay * dt).max(BigNumber.ZERO);
-        q3 = (q3_dq3[0] - q3 / q_decay * dt).max(BigNumber.ZERO);
-        q4 = (q4_dq4[0] - q4 / q_decay * dt).max(BigNumber.ZERO);
-        visual_dq1 = (q1 - old_q1) / dt;
-        visual_dq2 = (q2 - old_q2) / dt;
-        visual_dq3 = (q3 - old_q3) / dt;
-        visual_dq4 = (q4 - old_q4) / dt;
+        let production_dq1 = (calculateXDxSoftcapped(q1, dq1)[0] - q1 - q1 / q_decay) * dt;
+        let production_dq2 = (calculateXDxSoftcapped(q2, dq2)[0] - q2 - q2 / q_decay) * dt;
+        let production_dq3 = (calculateXDxSoftcapped(q3, dq3)[0] - q3 - q3 / q_decay) * dt;
+        let production_dq4 = (calculateXDxSoftcapped(q4, dq4)[0] - q4 - q4 / q_decay) * dt;
+        if (q1 < q1_cap && q1 + production_dq1 >= q1_cap) production_dq1 = q1_cap - q1;
+        if (q2 < q2_cap && q2 + production_dq1 >= q2_cap) production_dq2 = q2_cap - q2;
+        if (q3 < q3_cap && q3 + production_dq1 >= q3_cap) production_dq3 = q3_cap - q3;
+        if (q4 < q4_cap && q4 + production_dq1 >= q4_cap) production_dq4 = q4_cap - q4;
+        visual_dq1 = production_dq1; q1 = (q1 + production_dq1).max(BigNumber.ZERO);
+        visual_dq2 = production_dq2; q2 = (q2 + production_dq2).max(BigNumber.ZERO);
+        visual_dq3 = production_dq3; q3 = (q3 + production_dq3).max(BigNumber.ZERO);
+        visual_dq4 = production_dq4; q4 = (q4 + production_dq4).max(BigNumber.ZERO);
 
-        let old_rho = currency.value;
         let drho = getGammaUpgGammaMult() * getGammaUpgGammaTimeMult();
         if (conjectureActiveData.id === 2) {
             if (conjectureActiveData.difficulty === 1) drho *= q2;
@@ -721,9 +729,8 @@ var tick = (elapsedTime, multiplier) => {
             if (conjecturesHighestCompletedDifficulties[2] > 2) drho *= q4.max(BigNumber.ONE);
         }
 
-        let rho_drho = calculateXDxSoftcapped(currency.value, drho * dt);
-        currency.value = rho_drho[0]; drho = rho_drho[1];
-        visual_drho = (currency.value - old_rho) / dt;
+        let production_drho = (calculateXDxSoftcapped(currency.value, drho)[0] - currency.value) * dt;
+        visual_drho = production_drho; currency.value += production_drho;
         if (currency.value > gammaMaxRho) {
             gammaMaxRho = currency.value;
         }
@@ -1426,21 +1433,33 @@ var getGammaUpgGammaDQ1Scaling = (level = gammaup_gammaDQ1Scaling.level) => 0.1 
 var productionSoftcap = (x) => {
     if (x > 1) {
         x = x.pow(0.8 + conjectures[3].getReward(conjecturesHighestCompletedDifficulties[3]));
-    }
-    if (conjectureActiveData.id === 3 && x > 1) {
-        x = x.pow(0.5);
+        if (conjectureActiveData.id === 3) x = x.pow(0.5);
     }
     return x;
 };
 
 var productionSoftcapInverse = (x) => {
     if (x > 1) {
+        if (conjectureActiveData.id === 3) x = x.pow(1 / 0.5);
         x = x.pow(1 / (0.8 + conjectures[3].getReward(conjecturesHighestCompletedDifficulties[3])));
     }
-    if (conjectureActiveData.id === 3 && x > 1) {
-        x = x.pow(1 / 0.5);
-    }
     return x;
+};
+
+let calculateQCap = (q, dq, qDecay) => {
+    let result;
+    if (q + dq < BigNumber.ONE) {
+        result = qDecay * dq;
+    } else {
+        let softcap = 0.8 + conjectures[3].getReward(conjecturesHighestCompletedDifficulties[3]);
+        if (conjectureActiveData.id === 3) softcap *= 0.5;
+        let softcapReciprocal = 1 / softcap;
+
+        let initialThreshold = BigNumber.ONE;
+
+        result = (dq / (initialThreshold * (((1 + 1 / qDecay) / initialThreshold).pow(softcapReciprocal) - (1 / initialThreshold).pow(softcapReciprocal)))).pow(softcap);
+    }
+    return result;
 };
 
 var calculateXDxSoftcapped = (x, dx, initialThreshold = BigNumber.ONE, apply = [productionSoftcap, productionSoftcapInverse]) => {
