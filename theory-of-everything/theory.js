@@ -683,7 +683,8 @@ var setInternalState = (stateStr) => {
 };
 
 var tick = (elapsedTime, multiplier) => {
-    let dt = BigNumber.from(elapsedTime * multiplier) * getTickspeed();
+    let tickspeed = getTickspeed();
+    let dt = BigNumber.from(elapsedTime * multiplier) * tickspeed;
     let bonus = theory.publicationMultiplier;
 
     localDeltaTime = dt;
@@ -710,10 +711,10 @@ var tick = (elapsedTime, multiplier) => {
         if (q2 < q2_cap && q2 + production_dq1 >= q2_cap) production_dq2 = q2_cap - q2;
         if (q3 < q3_cap && q3 + production_dq1 >= q3_cap) production_dq3 = q3_cap - q3;
         if (q4 < q4_cap && q4 + production_dq1 >= q4_cap) production_dq4 = q4_cap - q4;
-        visual_dq1 = production_dq1; q1 = (q1 + production_dq1).max(BigNumber.ZERO);
-        visual_dq2 = production_dq2; q2 = (q2 + production_dq2).max(BigNumber.ZERO);
-        visual_dq3 = production_dq3; q3 = (q3 + production_dq3).max(BigNumber.ZERO);
-        visual_dq4 = production_dq4; q4 = (q4 + production_dq4).max(BigNumber.ZERO);
+        visual_dq1 = production_dq1 / tickspeed; q1 = (q1 + production_dq1).max(BigNumber.ZERO);
+        visual_dq2 = production_dq2 / tickspeed; q2 = (q2 + production_dq2).max(BigNumber.ZERO);
+        visual_dq3 = production_dq3 / tickspeed; q3 = (q3 + production_dq3).max(BigNumber.ZERO);
+        visual_dq4 = production_dq4 / tickspeed; q4 = (q4 + production_dq4).max(BigNumber.ZERO);
 
         let drho = getGammaUpgGammaMult() * getGammaUpgGammaTimeMult();
         if (conjectureActiveData.id === 2) {
@@ -728,7 +729,7 @@ var tick = (elapsedTime, multiplier) => {
         }
 
         let production_drho = (calculateXDxSoftcapped(currency.value, drho) - currency.value) * dt;
-        visual_drho = production_drho; currency.value += production_drho;
+        visual_drho = production_drho / tickspeed; currency.value += production_drho;
         if (currency.value > gammaMaxRho) {
             gammaMaxRho = currency.value;
         }
