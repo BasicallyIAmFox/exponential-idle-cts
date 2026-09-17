@@ -754,7 +754,7 @@ var tick = (elapsedTime, multiplier) => {
         });
     }
 
-    if (conjectureActiveData.id !== -1 && currency.value >= conjectures[conjectureActiveData.id].goal(conjectureActiveData.difficulty)) {
+    if (conjectureActiveData.id !== -1 && currency.value >= conjectures[conjectureActiveData.id].goal(conjectureActiveData.difficulty) && conjecturesHighestCompletedDifficulties[conjectureActiveData.id] < conjectures[conjectureActiveData.id].maxDifficulty) {
         conjecturesHighestCompletedDifficulties[conjectureActiveData.id] = conjectureActiveData.difficulty;
         onGammaAdjustmentReset(false);
     }
