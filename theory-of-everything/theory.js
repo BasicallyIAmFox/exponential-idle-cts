@@ -471,8 +471,8 @@ var init = () => {
             updateAvailability();
         };
         
-        let getRateDesc = (level) => `\\dot{q_1} \\text{ Automation/s} = 2 - 0.1 \\times ${level}`;
-        let getRateInfo = (level) => `\\dot{q_1} \\text{ Automation/s} = ${BigNumber.from(2 - 0.1 * level)}`;
+        let getRateDesc = (level) => `\\dot{q_1} \\text{ s/Automation} = 2 - 0.1 \\times ${level}`;
+        let getRateInfo = (level) => `\\dot{q_1} \\text{ s/Automation} = ${BigNumber.from(2 - 0.1 * level)}`;
         autobuyerDQ1Rate = theory.createUpgrade(14, gammaCurrency, new ExponentialCost(20, 1.42));
         autobuyerDQ1Rate.getDescription = (_) => Utils.getMath(getRateDesc(autobuyerDQ1Rate.level));
         autobuyerDQ1Rate.getInfo = (amount) => Utils.getMathTo(getRateInfo(autobuyerDQ1Rate.level), getRateInfo(autobuyerDQ1Rate.level + amount));
@@ -494,8 +494,8 @@ var init = () => {
             updateAvailability();
         };
         
-        let getRateDesc = (level) => `\\dot{q_2} \\text{ Automation/s} = 2 - 0.1 \\times ${level}`;
-        let getRateInfo = (level) => `\\dot{q_2} \\text{ Automation/s} = ${BigNumber.from(2 - 0.1 * level)}`;
+        let getRateDesc = (level) => `\\dot{q_2} \\text{ s/Automation} = 2 - 0.1 \\times ${level}`;
+        let getRateInfo = (level) => `\\dot{q_2} \\text{ s/Automation} = ${BigNumber.from(2 - 0.1 * level)}`;
         autobuyerDQ2Rate = theory.createUpgrade(16, gammaCurrency, new ExponentialCost(30, 1.41));
         autobuyerDQ2Rate.getDescription = (_) => Utils.getMath(getRateDesc(autobuyerDQ2Rate.level));
         autobuyerDQ2Rate.getInfo = (amount) => Utils.getMathTo(getRateInfo(autobuyerDQ2Rate.level), getRateInfo(autobuyerDQ2Rate.level + amount));
@@ -517,8 +517,8 @@ var init = () => {
             updateAvailability();
         };
         
-        let getRateDesc = (level) => `\\dot{q_3} \\text{ Automation/s} = 2 - 0.1 \\times ${level}`;
-        let getRateInfo = (level) => `\\dot{q_3} \\text{ Automation/s} = ${BigNumber.from(2 - 0.1 * level)}`;
+        let getRateDesc = (level) => `\\dot{q_3} \\text{ s/Automation} = 2 - 0.1 \\times ${level}`;
+        let getRateInfo = (level) => `\\dot{q_3} \\text{ s/Automation} = ${BigNumber.from(2 - 0.1 * level)}`;
         autobuyerDQ3Rate = theory.createUpgrade(24, gammaCurrency, new ExponentialCost(800, 1.18));
         autobuyerDQ3Rate.getDescription = (_) => Utils.getMath(getRateDesc(autobuyerDQ3Rate.level));
         autobuyerDQ3Rate.getInfo = (amount) => Utils.getMathTo(getRateInfo(autobuyerDQ3Rate.level), getRateInfo(autobuyerDQ3Rate.level + amount));
@@ -540,8 +540,8 @@ var init = () => {
             updateAvailability();
         };
         
-        let getRateDesc = (level) => `\\dot{q_4} \\text{ Automation/s} = 2 - 0.1 \\times ${level}`;
-        let getRateInfo = (level) => `\\dot{q_4} \\text{ Automation/s} = ${BigNumber.from(2 - 0.1 * level)}`;
+        let getRateDesc = (level) => `\\dot{q_4} \\text{ s/Automation} = 2 - 0.1 \\times ${level}`;
+        let getRateInfo = (level) => `\\dot{q_4} \\text{ s/Automation} = ${BigNumber.from(2 - 0.1 * level)}`;
         autobuyerDQ4Rate = theory.createUpgrade(29, gammaCurrency, new ExponentialCost(2e11, 1.2));
         autobuyerDQ4Rate.getDescription = (_) => Utils.getMath(getRateDesc(autobuyerDQ4Rate.level));
         autobuyerDQ4Rate.getInfo = (amount) => Utils.getMathTo(getRateInfo(autobuyerDQ4Rate.level), getRateInfo(autobuyerDQ4Rate.level + amount));
