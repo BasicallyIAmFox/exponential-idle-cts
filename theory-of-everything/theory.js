@@ -629,6 +629,9 @@ var updateAvailability = () => {
     dq2.isAvailable = stage === 0;
     dq3.isAvailable = stage === 0;
     dq4.isAvailable = stage === 0;
+    if (conjectureActiveData.id === 3) {
+        conjectures[conjecturesActiveData.id].onStart(conjectureActiveData.difficilty);
+    }
 
     gammaup_gammaMult.isAvailable = stage === 1;
     gammaup_gammaTimeMult.isAvailable = stage === 1;
@@ -688,10 +691,10 @@ var tick = (elapsedTime, multiplier) => {
         let dq2 = getDQ2() * getGammaUpgGammaDQ2Factor() * q3;
         let dq3 = getDQ3() * q4;
         let dq4 = getDQ4();
-        let q1_cap = calculateQCap(q1, dq1, q_decay);
-        let q2_cap = calculateQCap(q2, dq2, q_decay);
-        let q3_cap = calculateQCap(q3, dq3, q_decay);
-        let q4_cap = calculateQCap(q4, dq4, q_decay);
+        let q1_cap = calculateQCap(dq1, q_decay);
+        let q2_cap = calculateQCap(dq2, q_decay);
+        let q3_cap = calculateQCap(dq3, q_decay);
+        let q4_cap = calculateQCap(dq4, q_decay);
 
         let production_dq1 = (calculateXDxSoftcapped(q1, dq1) - q1 - q1 / q_decay) * dt;
         let production_dq2 = (calculateXDxSoftcapped(q2, dq2) - q2 - q2 / q_decay) * dt;
@@ -1435,11 +1438,9 @@ var productionSoftcapInverse = (x) => {
     return x;
 };
 
-let calculateQCap = (q, dq, qDecay) => {
-    let result;
-    if (q + dq < BigNumber.ONE) {
-        result = qDecay * dq;
-    } else {
+let calculateQCap = (dq, qDecay) => {
+    let result = qDecay * dq;
+    if (result >= BigNumber.ONE) {
         let softcap = 0.8 + conjectures[3].getReward(conjecturesHighestCompletedDifficulties[3]);
         if (conjectureActiveData.id === 3) softcap *= 0.5;
         let softcapReciprocal = 1 / softcap;
