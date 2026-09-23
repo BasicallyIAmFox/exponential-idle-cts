@@ -409,12 +409,12 @@ var init = () => {
     {
         let getDesc = (level) => {
             let base = `\\gamma_5 = ${2 * level}`;
-            if (level === 0) base = `\\text{Add } \\gamma_5 \\text{ term to all } \\dot{q} \\text{ decay} ; \\text{ } ${base}`;
+            if (level === 0) base = `\\text{Add } \\gamma_5 \\text{ term to all } \\dot{q} \\text{ decay} \\\\ ${base}`;
             return base;
         };
         let getInfo = (level) = (level) => {
             let base = `\\gamma_5 = ${getGammaUpgGammaQDecay(level)}`;
-            if (level === 0) base = `\\text{Add } \\gamma_5 \\text{ term to all } \\dot{q} \\text{ decay} ; \\text{ } ${base}`;
+            if (level === 0) base = `\\text{Add } \\gamma_5 \\text{ term to all } \\dot{q} \\text{ decay} \\\\ ${base}`;
             return base;
         };
         gammaup_gammaQDecay = theory.createUpgrade(22, gammaCurrency, new ExponentialCost(100, Math.log2(2.5)));
