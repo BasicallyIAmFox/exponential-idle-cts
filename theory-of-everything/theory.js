@@ -701,9 +701,9 @@ var tick = (elapsedTime, multiplier) => {
         let production_dq3 = (calculateXDxSoftcapped(q3, dq3) - q3 - q3 / q_decay) * dt;
         let production_dq4 = (calculateXDxSoftcapped(q4, dq4) - q4 - q4 / q_decay) * dt;
         if (q1 < q1_cap && q1 + production_dq1 >= q1_cap) production_dq1 = q1_cap - q1;
-        if (q2 < q2_cap && q2 + production_dq1 >= q2_cap) production_dq2 = q2_cap - q2;
-        if (q3 < q3_cap && q3 + production_dq1 >= q3_cap) production_dq3 = q3_cap - q3;
-        if (q4 < q4_cap && q4 + production_dq1 >= q4_cap) production_dq4 = q4_cap - q4;
+        if (q2 < q2_cap && q2 + production_dq2 >= q2_cap) production_dq2 = q2_cap - q2;
+        if (q3 < q3_cap && q3 + production_dq3 >= q3_cap) production_dq3 = q3_cap - q3;
+        if (q4 < q4_cap && q4 + production_dq4 >= q4_cap) production_dq4 = q4_cap - q4;
         visual_dq1 = production_dq1 / tickspeed; q1 = (q1 + production_dq1).max(BigNumber.ZERO);
         visual_dq2 = production_dq2 / tickspeed; q2 = (q2 + production_dq2).max(BigNumber.ZERO);
         visual_dq3 = production_dq3 / tickspeed; q3 = (q3 + production_dq3).max(BigNumber.ZERO);
