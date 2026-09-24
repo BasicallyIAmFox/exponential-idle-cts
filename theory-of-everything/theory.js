@@ -630,7 +630,7 @@ var updateAvailability = () => {
     dq3.isAvailable = stage === 0;
     dq4.isAvailable = stage === 0;
     if (conjectureActiveData.id === 3) {
-        conjectures[conjectureActiveData.id].onStart(conjectureActiveData.difficilty);
+        conjectures[conjectureActiveData.id].onStart(conjectureActiveData.difficulty);
     }
 
     gammaup_gammaMult.isAvailable = stage === 1;
