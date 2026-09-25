@@ -1422,18 +1422,22 @@ var getGammaUpgGammaDQ1Scaling = (level = gammaup_gammaDQ1Scaling.level) => 0.1 
 // Math
 //
 
+let computeFirstSoftcap = () => {
+    let result = 0.8 + conjectures[3].getReward(conjecturesHighestCompletedDifficulties[3]);
+    if (conjectureActiveData.id === 3) result *= 2;
+    return result;
+};
+
 var productionSoftcap = (x) => {
     if (x > 1) {
-        x = x.pow(0.8 + conjectures[3].getReward(conjecturesHighestCompletedDifficulties[3]));
-        if (conjectureActiveData.id === 3) x = x.pow(0.5);
+        x = x.pow(computeFirstSoftcap());
     }
     return x;
 };
 
 var productionSoftcapInverse = (x) => {
     if (x > 1) {
-        if (conjectureActiveData.id === 3) x = x.pow(1 / 0.5);
-        x = x.pow(1 / (0.8 + conjectures[3].getReward(conjecturesHighestCompletedDifficulties[3])));
+        x = x.pow(1 / computeFirstSoftcap());
     }
     return x;
 };
@@ -1441,12 +1445,9 @@ var productionSoftcapInverse = (x) => {
 let calculateQCap = (dq, qDecay) => {
     let result = qDecay * dq;
     if (result >= BigNumber.ONE) {
-        let softcap = 0.8 + conjectures[3].getReward(conjecturesHighestCompletedDifficulties[3]);
-        if (conjectureActiveData.id === 3) softcap *= 0.5;
+        let softcap = computeFirstSoftcap();
         let softcapReciprocal = 1 / softcap;
-
         let initialThreshold = BigNumber.ONE;
-
         result = (dq / (initialThreshold * (((1 + 1 / qDecay) / initialThreshold).pow(softcapReciprocal) - (1 / initialThreshold).pow(softcapReciprocal)))).pow(softcap);
     }
     return result;
