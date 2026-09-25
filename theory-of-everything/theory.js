@@ -409,12 +409,12 @@ var init = () => {
     {
         let getDesc = (level) => {
             let base = `\\gamma_5 = ${2 * level}`;
-            if (level === 0) base = `\\text{Add } \\gamma_5 \\text{ term to all } \\dot{q} \\text{ decay} ; \\text{ } ${base}`;
+            if (level === 0) base = `\\text{Add } \\gamma_5 \\text{ term to all } \\dot{q} \\text{ decay} \\\\ ${base}`;
             return base;
         };
         let getInfo = (level) = (level) => {
             let base = `\\gamma_5 = ${getGammaUpgGammaQDecay(level)}`;
-            if (level === 0) base = `\\text{Add } \\gamma_5 \\text{ term to all } \\dot{q} \\text{ decay} ; \\text{ } ${base}`;
+            if (level === 0) base = `\\text{Add } \\gamma_5 \\text{ term to all } \\dot{q} \\text{ decay} \\\\ ${base}`;
             return base;
         };
         gammaup_gammaQDecay = theory.createUpgrade(22, gammaCurrency, new ExponentialCost(100, Math.log2(2.5)));
@@ -630,7 +630,7 @@ var updateAvailability = () => {
     dq3.isAvailable = stage === 0;
     dq4.isAvailable = stage === 0;
     if (conjectureActiveData.id === 3) {
-        conjectures[conjecturesActiveData.id].onStart(conjectureActiveData.difficilty);
+        conjectures[conjectureActiveData.id].onStart(conjectureActiveData.difficulty);
     }
 
     gammaup_gammaMult.isAvailable = stage === 1;
@@ -701,9 +701,9 @@ var tick = (elapsedTime, multiplier) => {
         let production_dq3 = (calculateXDxSoftcapped(q3, dq3) - q3 - q3 / q_decay) * dt;
         let production_dq4 = (calculateXDxSoftcapped(q4, dq4) - q4 - q4 / q_decay) * dt;
         if (q1 < q1_cap && q1 + production_dq1 >= q1_cap) production_dq1 = q1_cap - q1;
-        if (q2 < q2_cap && q2 + production_dq1 >= q2_cap) production_dq2 = q2_cap - q2;
-        if (q3 < q3_cap && q3 + production_dq1 >= q3_cap) production_dq3 = q3_cap - q3;
-        if (q4 < q4_cap && q4 + production_dq1 >= q4_cap) production_dq4 = q4_cap - q4;
+        if (q2 < q2_cap && q2 + production_dq2 >= q2_cap) production_dq2 = q2_cap - q2;
+        if (q3 < q3_cap && q3 + production_dq3 >= q3_cap) production_dq3 = q3_cap - q3;
+        if (q4 < q4_cap && q4 + production_dq4 >= q4_cap) production_dq4 = q4_cap - q4;
         visual_dq1 = production_dq1 / tickspeed; q1 = (q1 + production_dq1).max(BigNumber.ZERO);
         visual_dq2 = production_dq2 / tickspeed; q2 = (q2 + production_dq2).max(BigNumber.ZERO);
         visual_dq3 = production_dq3 / tickspeed; q3 = (q3 + production_dq3).max(BigNumber.ZERO);
