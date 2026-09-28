@@ -1424,7 +1424,7 @@ var getGammaUpgGammaDQ1Scaling = (level = gammaup_gammaDQ1Scaling.level) => 0.1 
 
 let computeFirstSoftcap = () => {
     let result = 0.8 + conjectures[3].getReward(conjecturesHighestCompletedDifficulties[3]);
-    if (conjectureActiveData.id === 3) result *= 2;
+    if (conjectureActiveData.id === 3) result /= 2;
     return result;
 };
 
