@@ -918,6 +918,11 @@ var onGammaAdjustmentReset = (soft) => {
 };
 
 var onPublicationReset = (soft) => {
+    if (milestone_keepConjCompletions.level < 1) conjecturesHighestCompletedDifficulties[0] = 0;
+    if (milestone_keepConjCompletions.level < 2) conjecturesHighestCompletedDifficulties[1] = 0;
+    if (milestone_keepConjCompletions.level < 3) conjecturesHighestCompletedDifficulties[2] = 0;
+    if (milestone_keepConjCompletions.level < 4) conjecturesHighestCompletedDifficulties[3] = 0;
+    
     onGammaAdjustmentReset(true);
 
     gammaMaxRhoLast = BigNumber.ZERO;
@@ -929,10 +934,6 @@ var onPublicationReset = (soft) => {
     }
 
     gammaup_gammaMult.level = gammaup_gammaTimeMult.level = gammaup_gammaTickspeed.level = gammaup_gammaDQ2Factor.level = gammaup_gammaQDecay.level = gammaup_gammaGainExp.level = gammaup_gammaDQ1Scaling.level = 0;
-    if (milestone_keepConjCompletions.level < 1) conjecturesHighestCompletedDifficulties[0] = 0;
-    if (milestone_keepConjCompletions.level < 2) conjecturesHighestCompletedDifficulties[1] = 0;
-    if (milestone_keepConjCompletions.level < 3) conjecturesHighestCompletedDifficulties[2] = 0;
-    if (milestone_keepConjCompletions.level < 4) conjecturesHighestCompletedDifficulties[3] = 0;
 };
 
 var canResetStage = () => gammaResets < 1 && gammaMaxRho < 1000 || conjectureActiveData.id > -1;
