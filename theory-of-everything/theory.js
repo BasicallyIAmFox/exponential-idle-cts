@@ -1048,7 +1048,7 @@ const gammaResetMenuPopup = ui.createPopup({
                     ui.createLatexLabel({
                         row: 1, column: 1,
                         horizontalTextAlignment: TextAlignment.CENTER,
-                        text: () => gammaCurrency !== undefined && `$${gammaCurrency.value + getGammaPending(gammaMaxRho)}$` || ``,
+                        text: () => gammaCurrency !== undefined ? `$${gammaCurrency.value + getGammaPending(gammaMaxRho)}$` : ``,
                     }),
                 ],
             }),
