@@ -632,10 +632,10 @@ var init = () => {
         addPublicationMilestone(milestone_autoGammaUpBuyer);
     }
     {
-        let getDesc = (level) => `Keep Conjecture ${Math.min(level + 1, 4)} completions on Publication`;
+        let getDesc = (level) => `Keep Conjecture ${Math.min(level + 1, 4)} completions`;
         let getInfo = (level) => {
-            if (level === 0) return `Keep Conjecture 1 completions on Publication`;
-            return `Keep Conjecture 1-${level} completions on Publication`;
+            if (level === 0) return `Keep Conjecture 1 completions`;
+            return `Keep Conjecture 1-${level} completions`;
         };
         milestone_keepConjCompletions = theory.createMilestoneUpgrade(2, 4);
         milestone_keepConjCompletions.getDescription = (_) => getDesc(milestone_keepConjCompletions.level);
@@ -1420,7 +1420,7 @@ var addPublicationMilestone = (upgrade) => {
                                 isVisible: () => !publishMenuHoldingInfo,
                             }),
                         ],
-                        opacity: () => upgrade.level < upgrade.maxLevel ? 1 : 0.4,
+                        opacity: () => upgrade.level < upgrade.maxLevel && theory.milestonesUnused > 0 ? 1 : 0.4,
                     }),
                 ],
                 onTouched: (e) => {
