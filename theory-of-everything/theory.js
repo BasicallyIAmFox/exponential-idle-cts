@@ -81,12 +81,18 @@ var gammaCurrencyTotal = BigNumber.ZERO;
 var gammaResets = 0;
 var gammaMaxRho = BigNumber.ZERO;
 var gammaMaxRhoLast = BigNumber.ZERO;
-var gammaup_gammaMult, gammaup_gammaTimeMult, gammaup_gammaTickspeed, gammaup_gammaDQ2Factor, gammaup_gammaQDecay, gammaup_gammaGainExp;
-var gammaup_gammaDQ1Scaling;
+var gammaup_gammaMult, gammaup_gammaTimeMult, gammaup_gammaTickspeed, gammaup_gammaDQ2Factor, gammaup_gammaQDecay, gammaup_gammaGainExp, gammaup_gammaDQ1Scaling;
 var getGammaGainScaling = () => gammaGainBaseScaling + getGammaUpgGammaGainExp();
 var getGammaGainScalingLatex = () => `${gammaGainBaseScalingStr} + \\gamma_6`;
 var getGammaGainRhoThreshold = () => gammaGainRhoThreshold;
 var getGammaGainRhoThresholdLatex = () => gammaGainRhoThresholdStr;
+
+var autoGamma;
+var gammaAutoEnabled = false;
+var gammaAutoMode = AutoResetMode.RATIO;
+var gammaAutoRatio = BigNumber.ONE;
+var gammaAutoExpression = ``;
+var gammaAutoMathExpression = MathExpression.parse(``);
 
 var conjectureActiveData = {
     ["id"]: -1,
@@ -229,6 +235,20 @@ var exitConjecture = () => {
     conjectureActiveData.difficulty = -1;
 };
 
+// Publications
+const tauRate = 0.4;
+var publicationResets = 0;
+var publicationMaxGamma = BigNumber.ZERO;
+var publicationTauPublished = BigNumber.ZERO;
+var getTau = () => achievement6.isUnlocked ? gammaCurrency.value.pow(tauRate) : BigNumber.ZERO;
+var getGammaFromTau = (tau) => tau.pow(1 / tauRate);
+var getPublicationMultiplier = (tau) => tau.pow(0.5).max(BigNumber.ONE);
+var getPublicationMultiplierFormula = (symbol) => `\\Pi = ${symbol}^{0.5}`;
+var canPublish = () => publicationMaxGamma > getGammaFromTau(publicationTauPublished);
+
+var milestone_autoGammaUpBuyer;
+var milestone_keepConjCompletions;
+
 // Auto-buyer variables
 var autobuyerUnlock, autobuyEnabled;
 var autobuyerUnlockDQ1, autobuyerDQ1Rate, autobuyerDQ1Bulk;
@@ -236,17 +256,32 @@ var autobuyerUnlockDQ2, autobuyerDQ2Rate, autobuyerDQ2Bulk;
 var autobuyerUnlockDQ3, autobuyerDQ3Rate, autobuyerDQ3Bulk;
 var autobuyerUnlockDQ4, autobuyerDQ4Rate, autobuyerDQ4Bulk;
 var autobuyerConfigurationUpgradeMapper = { };
+var autobuyerConfigurationBuyingConditions = { };
 var autobuyerConfiguration = {
     ["q1"]: { autobuyTimer: 999, },
     ["q2"]: { autobuyTimer: 999, },
     ["q3"]: { autobuyTimer: 999, },
     ["q4"]: { autobuyTimer: 999, },
+    ["gamma1"]: { autobuyTimer: 1, },
+    ["gamma2"]: { autobuyTimer: 1, },
+    ["gamma3"]: { autobuyTimer: 1, },
+    ["gamma4"]: { autobuyTimer: 1, },
+    ["gamma5"]: { autobuyTimer: 1, },
+    ["gamma6"]: { autobuyTimer: 1, },
+    ["gamma7"]: { autobuyTimer: 1, },
 };
 var autobuyerConfigurationCooldown = {
     ["q1"]: () => [2 - 0.1 * autobuyerDQ1Rate.level, autobuyerDQ1Bulk.level + 1],
     ["q2"]: () => [2 - 0.1 * autobuyerDQ2Rate.level, autobuyerDQ2Bulk.level + 1],
     ["q3"]: () => [2 - 0.1 * autobuyerDQ3Rate.level, autobuyerDQ3Bulk.level + 1],
     ["q4"]: () => [2 - 0.1 * autobuyerDQ4Rate.level, autobuyerDQ4Bulk.level + 1],
+    ["gamma1"]: () => [1, 1],
+    ["gamma2"]: () => [1, 1],
+    ["gamma3"]: () => [1, 1],
+    ["gamma4"]: () => [1, 1],
+    ["gamma5"]: () => [1, 1],
+    ["gamma6"]: () => [1, 1],
+    ["gamma7"]: () => [1, 1],
 };
 
 // Stolen from MF
@@ -293,6 +328,7 @@ var init = () => {
         dq1.getDescription = (_) => Utils.getMath(getDesc(dq1.level));
         dq1.getInfo = (amount) => Utils.getMathTo(getInfo(dq1.level), getInfo(dq1.level + amount));
         autobuyerConfigurationUpgradeMapper["q1"] = dq1;
+        autobuyerConfigurationBuyingConditions["q1"] = () => autobuyerUnlockDQ1.level > 0;
     }
     {
         let getDesc = (level) => {
@@ -305,6 +341,7 @@ var init = () => {
         dq2.getDescription = (_) => Utils.getMath(getDesc(dq2.level));
         dq2.getInfo = (amount) => Utils.getMathTo(getInfo(dq2.level), getInfo(dq2.level + amount));
         autobuyerConfigurationUpgradeMapper["q2"] = dq2;
+        autobuyerConfigurationBuyingConditions["q2"] = () => autobuyerUnlockDQ2.level > 0;
     }
     {
         let getDesc = (level) => `\\dot{q}_3 = ${getDQ3(level).toString(1)} \\times q_4`;
@@ -313,6 +350,7 @@ var init = () => {
         dq3.getDescription = (_) => Utils.getMath(getDesc(dq3.level));
         dq3.getInfo = (amount) => Utils.getMathTo(getInfo(dq3.level), getInfo(dq3.level + amount));
         autobuyerConfigurationUpgradeMapper["q3"] = dq3;
+        autobuyerConfigurationBuyingConditions["q3"] = () => autobuyerUnlockDQ3.level > 0;
     }
     {
         let getDesc = (level) => `\\dot{q}_4 = ${getDQ4(level).toString(1)}`;
@@ -339,6 +377,7 @@ var init = () => {
         dq4.getDescription = (_) => Utils.getMath(getDesc(dq4.level));
         dq4.getInfo = (amount) => Utils.getMathTo(getInfo(dq4.level), getInfo(dq4.level + amount));
         autobuyerConfigurationUpgradeMapper["q4"] = dq4;
+        autobuyerConfigurationBuyingConditions["q4"] = () => autobuyerUnlockDQ4.level > 0;
     }
     {
         theory.createBuyAllUpgrade(0, currency, 10000);
@@ -358,6 +397,8 @@ var init = () => {
         gammaup_gammaMult = theory.createUpgrade(10, gammaCurrency, new ExponentialCost(1, Math.log2(1.85)));
         gammaup_gammaMult.getDescription = (_) => Utils.getMath(getDesc(gammaup_gammaMult.level));
         gammaup_gammaMult.getInfo = (amount) => Utils.getMathTo(getInfo(gammaup_gammaMult.level), getInfo(gammaup_gammaMult.level + amount));
+        autobuyerConfigurationUpgradeMapper["gamma1"] = gammaup_gammaMult;
+        autobuyerConfigurationBuyingConditions["gamma1"] = () => milestone_autoGammaUpBuyer.level > 6;
     }
     {
         let getDesc = (level) => {
@@ -373,6 +414,8 @@ var init = () => {
         gammaup_gammaTimeMult = theory.createUpgrade(17, gammaCurrency, new ExponentialCost(1, Math.log2(1.7)));
         gammaup_gammaTimeMult.getDescription = (_) => Utils.getMath(getDesc(gammaup_gammaTimeMult.level));
         gammaup_gammaTimeMult.getInfo = (amount) => Utils.getMathTo(getInfo(gammaup_gammaTimeMult.level), getInfo(gammaup_gammaTimeMult.level + amount));
+        autobuyerConfigurationUpgradeMapper["gamma2"] = gammaup_gammaTimeMult;
+        autobuyerConfigurationBuyingConditions["gamma2"] = () => milestone_autoGammaUpBuyer.level > 5;
     }
     {
         let getDesc = (level) => {
@@ -389,6 +432,8 @@ var init = () => {
         gammaup_gammaTickspeed.getDescription = (_) => Utils.getMath(getDesc(gammaup_gammaTickspeed.level));
         gammaup_gammaTickspeed.getInfo = (amount) => Utils.getMathTo(getInfo(gammaup_gammaTickspeed.level), getInfo(gammaup_gammaTickspeed.level + amount));
         gammaup_gammaTickspeed.maxLevel = 5;
+        autobuyerConfigurationUpgradeMapper["gamma3"] = gammaup_gammaTickspeed;
+        autobuyerConfigurationBuyingConditions["gamma3"] = () => milestone_autoGammaUpBuyer.level > 4;
     }
     {
         let getDesc = (level) => {
@@ -405,6 +450,8 @@ var init = () => {
         gammaup_gammaDQ2Factor.getDescription = (_) => Utils.getMath(getDesc(gammaup_gammaDQ2Factor.level));
         gammaup_gammaDQ2Factor.getInfo = (amount) => Utils.getMathTo(getInfo(gammaup_gammaDQ2Factor.level), getInfo(gammaup_gammaDQ2Factor.level + amount));
         gammaup_gammaDQ2Factor.maxLevel = 3;
+        autobuyerConfigurationUpgradeMapper["gamma4"] = gammaup_gammaDQ2Factor;
+        autobuyerConfigurationBuyingConditions["gamma4"] = () => milestone_autoGammaUpBuyer.level > 3;
     }
     {
         let getDesc = (level) => {
@@ -421,6 +468,8 @@ var init = () => {
         gammaup_gammaQDecay.getDescription = (_) => Utils.getMath(getDesc(gammaup_gammaQDecay.level));
         gammaup_gammaQDecay.getInfo = (amount) => Utils.getMathTo(getInfo(gammaup_gammaQDecay.level), getInfo(gammaup_gammaQDecay.level + amount));
         gammaup_gammaQDecay.maxLevel = 5;
+        autobuyerConfigurationUpgradeMapper["gamma5"] = gammaup_gammaQDecay;
+        autobuyerConfigurationBuyingConditions["gamma5"] = () => milestone_autoGammaUpBuyer.level > 2;
     }
     {
         let getDesc = (level) => `\\gamma_6 = ${BigNumber.from(0.04 * level)}`;
@@ -429,6 +478,8 @@ var init = () => {
         gammaup_gammaGainExp.getDescription = (_) => Utils.getMath(getDesc(gammaup_gammaGainExp.level));
         gammaup_gammaGainExp.getInfo = (amount) => Utils.getMathTo(getInfo(gammaup_gammaGainExp.level), getInfo(gammaup_gammaGainExp.level + amount));
         gammaup_gammaGainExp.maxLevel = 6;
+        autobuyerConfigurationUpgradeMapper["gamma6"] = gammaup_gammaGainExp;
+        autobuyerConfigurationBuyingConditions["gamma6"] = () => milestone_autoGammaUpBuyer.level > 1;
     }
     {
         let getDesc = (level) => {
@@ -445,6 +496,8 @@ var init = () => {
         gammaup_gammaDQ1Scaling.getDescription = (_) => Utils.getMath(getDesc(gammaup_gammaDQ1Scaling.level));
         gammaup_gammaDQ1Scaling.getInfo = (amount) => Utils.getMathTo(getInfo(gammaup_gammaDQ1Scaling.level), getInfo(gammaup_gammaDQ1Scaling.level + amount));
         gammaup_gammaDQ1Scaling.maxLevel = 3;
+        autobuyerConfigurationUpgradeMapper["gamma7"] = gammaup_gammaDQ1Scaling;
+        autobuyerConfigurationBuyingConditions["gamma7"] = () => milestone_autoGammaUpBuyer.level > 0;
     }
 
     {
@@ -466,10 +519,7 @@ var init = () => {
         autobuyerUnlockDQ1.description = `Unlock $\\dot{q_1}$ auto-buyer`;
         autobuyerUnlockDQ1.info = `Allows to automatically purchase $\\dot{q_1}$`;
         autobuyerUnlockDQ1.maxLevel = 1;
-        autobuyerUnlockDQ1.bought = (_) => {
-            autobuyerConfiguration.q1.enabled = true;
-            updateAvailability();
-        };
+        autobuyerUnlockDQ1.bought = (_) => updateAvailability();
         
         let getRateDesc = (level) => `\\dot{q_1} \\text{ s/Automation} = 2 - 0.1 \\times ${level}`;
         let getRateInfo = (level) => `\\dot{q_1} \\text{ s/Automation} = ${BigNumber.from(2 - 0.1 * level)}`;
@@ -489,10 +539,7 @@ var init = () => {
         autobuyerUnlockDQ2.description = `Unlock $\\dot{q_2}$ auto-buyer`;
         autobuyerUnlockDQ2.info = `Allows to automatically purchase $\\dot{q_2}$`;
         autobuyerUnlockDQ2.maxLevel = 1;
-        autobuyerUnlockDQ2.bought = (_) => {
-            autobuyerConfiguration.q2.enabled = true;
-            updateAvailability();
-        };
+        autobuyerUnlockDQ2.bought = (_) => updateAvailability();
         
         let getRateDesc = (level) => `\\dot{q_2} \\text{ s/Automation} = 2 - 0.1 \\times ${level}`;
         let getRateInfo = (level) => `\\dot{q_2} \\text{ s/Automation} = ${BigNumber.from(2 - 0.1 * level)}`;
@@ -512,10 +559,7 @@ var init = () => {
         autobuyerUnlockDQ3.description = `Unlock $\\dot{q_3}$ auto-buyer`;
         autobuyerUnlockDQ3.info = `Allows to automatically purchase $\\dot{q_3}$`;
         autobuyerUnlockDQ3.maxLevel = 1;
-        autobuyerUnlockDQ3.bought = (_) => {
-            autobuyerConfiguration.q3.enabled = true;
-            updateAvailability();
-        };
+        autobuyerUnlockDQ3.bought = (_) => updateAvailability();
         
         let getRateDesc = (level) => `\\dot{q_3} \\text{ s/Automation} = 2 - 0.1 \\times ${level}`;
         let getRateInfo = (level) => `\\dot{q_3} \\text{ s/Automation} = ${BigNumber.from(2 - 0.1 * level)}`;
@@ -535,10 +579,7 @@ var init = () => {
         autobuyerUnlockDQ4.description = `Unlock $\\dot{q_4}$ auto-buyer`;
         autobuyerUnlockDQ4.info = `Allows to automatically purchase $\\dot{q_4}$`;
         autobuyerUnlockDQ4.maxLevel = 1;
-        autobuyerUnlockDQ4.bought = (_) => {
-            autobuyerConfiguration.q4.enabled = true;
-            updateAvailability();
-        };
+        autobuyerUnlockDQ4.bought = (_) => updateAvailability();
         
         let getRateDesc = (level) => `\\dot{q_4} \\text{ s/Automation} = 2 - 0.1 \\times ${level}`;
         let getRateInfo = (level) => `\\dot{q_4} \\text{ s/Automation} = ${BigNumber.from(2 - 0.1 * level)}`;
@@ -567,6 +608,41 @@ var init = () => {
         tickspeed.maxLevel = 4;
     }
 
+    const milestoneArray = [
+        8, // auto gamma
+        9, 10, 11, 12, 13, 14, 15, // gamma auto buyers
+        16, 17, 18, 20, // conjecture keeping
+    ];
+    theory.setMilestoneCost(new CustomCost((lvl) => tauRate / 0.4 * BigNumber.from(milestoneArray[Math.min(lvl, milestoneArray.length - 1)])));
+    {
+        autoGamma = theory.createMilestoneUpgrade(0, 1);
+        autoGamma.description = `Auto-Gamma`;
+        autoGamma.info = `Automatically performs Gamma-Adjustments`;
+        addPublicationMilestone(autoGamma);
+    }
+    {
+        let getDesc = (level) => `Unlock $\\gamma_${Math.max(7 - level, 1)}$ auto-buyer`;
+        let getInfo = (level) => {
+            if (level === 0) return `Allows to automatically purchase $\\gamma_7$`;
+            return `Allows to automatically purchase from $\\gamma_7$ to $\\gamma_${Math.max(7 - level, 1)}$`;
+        };
+        milestone_autoGammaUpBuyer = theory.createMilestoneUpgrade(1, 7);
+        milestone_autoGammaUpBuyer.getDescription = (_) => getDesc(milestone_autoGammaUpBuyer.level);
+        milestone_autoGammaUpBuyer.getInfo = (_) => getInfo(milestone_autoGammaUpBuyer.level);
+        addPublicationMilestone(milestone_autoGammaUpBuyer);
+    }
+    {
+        let getDesc = (level) => `Keep Conjecture ${Math.min(level, 4)} completions on Publication`;
+        let getInfo = (level) => {
+            if (level === 0) return `Keep Conjecture 1 completions on Publication`;
+            return `Keep Conjecture 1-${level} completions on Publication`;
+        };
+        milestone_keepConjCompletions = theory.createMilestoneUpgrade(2, 4);
+        milestone_keepConjCompletions.getDescription = (_) => getDesc(milestone_keepConjCompletions.level);
+        milestone_keepConjCompletions.getInfo = (_) => getInfo(milestone_keepConjCompletions.level);
+        addPublicationMilestone(milestone_keepConjCompletions);
+    }
+
     let achievement_category1 = theory.createAchievementCategory(0, "Progression");
     {
         achievement1 = theory.createAchievement(0, achievement_category1, "Achievements Are The Way to Go", `Reach 1ρ, 1 q₁, or 1 q₂.\n\nReward: all production above 1 is powered by 0.8.`, () => currency.value >= 1 || q1 >= 1 || q2 >= 1);
@@ -574,7 +650,7 @@ var init = () => {
         achievement3 = theory.createAchievement(2, achievement_category1, "Decay Was Too Strong", `Perform a gamma reset.\n\nReward: multiply γ gain by 2.`, () => gammaResets > 0);
         achievement5 = theory.createAchievement(4, achievement_category1, "Full House", `Max out γ₄, γ₅, γ₆ and γ₇.\n\nReward: unlock Conjectures.`, () => gammaup_gammaDQ2Factor.level === gammaup_gammaDQ2Factor.maxLevel && gammaup_gammaQDecay.level === gammaup_gammaQDecay.maxLevel && gammaup_gammaGainExp.level === gammaup_gammaGainExp.maxLevel && gammaup_gammaDQ1Scaling.level === gammaup_gammaDQ1Scaling.maxLevel);
         achievement4 = theory.createAchievement(3, achievement_category1, "Big q Family", `Let q₁, q₂, q₃ and q₄ all be above 1.`, () => q1 > 1 && q2 > 1 && q3 > 1 && q4 > 1);
-        achievement6 = theory.createAchievement(5, achievement_category1, "Complete Proof", `Complete 12 Conjectures.\n\nReward: unlock τ.`, () => conjecturesHighestCompletedDifficulties[0] === 3 && conjecturesHighestCompletedDifficulties[1] === 3 && conjecturesHighestCompletedDifficulties[2] === 3 && conjecturesHighestCompletedDifficulties[3] === 3);
+        achievement6 = theory.createAchievement(5, achievement_category1, "Complete Proof", `Complete 12 Conjectures.\n\nReward: unlock τ and Publications.`, () => conjecturesHighestCompletedDifficulties[0] === 3 && conjecturesHighestCompletedDifficulties[1] === 3 && conjecturesHighestCompletedDifficulties[2] === 3 && conjecturesHighestCompletedDifficulties[3] === 3);
     }
 
     {
@@ -615,6 +691,7 @@ Regardless of the answer, you're ready to Publish.`, () => achievement6.isUnlock
     }
 
     updateAvailability();
+    initializePublishMenu();
 };
 
 var updateAvailability = () => {
@@ -643,6 +720,7 @@ var updateAvailability = () => {
 };
 
 var getInternalState = () => JSON.stringify({
+    stage,
     t: t.toBase64String(),
     q1: q1.toBase64String(),
     q2: q2.toBase64String(),
@@ -655,12 +733,24 @@ var getInternalState = () => JSON.stringify({
     conjectureActiveData,
     conjecturesHighestCompletedDifficulties,
     autobuyerConfiguration: autobuyerConfiguration,
+    gammaAuto: {
+        enabled: gammaAutoEnabled,
+        mode: gammaAutoMode === AutoResetMode.RATIO ? 0 : 2,
+        ratio: gammaAutoRatio.toBase64String(),
+        expression: gammaAutoExpression,
+        mathExpression: gammaAutoMathExpression.serialize(),
+    },
+
+    publicationResets,
+    publicationMaxGamma: publicationMaxGamma.toBase64String(),
+    publicationTauPublished: publicationTauPublished.toBase64String(),
 });
 
 var setInternalState = (stateStr) => {
     if (!stateStr) return;
     
     let state = JSON.parse(stateStr);
+    if (state.stage) stage = state.stage;
     t = BigNumber.fromBase64String(state.t);
     q1 = BigNumber.fromBase64String(state.q1);
     q2 = BigNumber.fromBase64String(state.q2);
@@ -668,17 +758,30 @@ var setInternalState = (stateStr) => {
     q4 = BigNumber.fromBase64String(state.q4);
 
     gammaResets = state.gammaResets;
-    if (state.gammaMaxRho) gammaMaxRho = BigNumber.fromBase64String(state.gammaMaxRho);
-    if (state.gammaMaxRhoLast) gammaMaxRhoLast = BigNumber.fromBase64String(state.gammaMaxRhoLast);
+    gammaMaxRho = BigNumber.fromBase64String(state.gammaMaxRho);
+    gammaMaxRhoLast = BigNumber.fromBase64String(state.gammaMaxRhoLast);
     conjectureActiveData = state.conjectureActiveData;
     conjecturesHighestCompletedDifficulties = state.conjecturesHighestCompletedDifficulties;
-    autobuyerConfiguration = state.autobuyerConfiguration;
+    autobuyerConfiguration = {...autobuyerConfiguration, ...state.autobuyerConfiguration};
+    if (state.gammaAuto) {
+        gammaAutoEnabled = state.gammaAuto.enabled;
+        gammaAutoMode = state.gammaAuto.mode === 0 ? AutoResetMode.RATIO : AutoResetMode.EXPRESSION;
+        gammaAutoRatio = BigNumber.fromBase64String(state.gammaAuto.ratio);
+        gammaAutoExpression = state.gammaAuto.expression;
+        gammaAutoMathExpression = MathExpression.deserialize(state.gammaAuto.mathExpression);
+
+        gammaAutoResetToggle.isToggled = gammaAutoEnabled;
+        autoGammaExpressionEntry.text = gammaAutoExpression;
+    }
+
+    if (state.publicationResets) publicationResets = state.publicationResets;
+    if (state.publicationMaxGamma) publicationMaxGamma = BigNumber.fromBase64String(state.publicationMaxGamma);
+    if (state.publicationTauPublished) publicationTauPublished = BigNumber.fromBase64String(state.publicationTauPublished);
 };
 
 var tick = (elapsedTime, multiplier) => {
     let tickspeed = getTickspeed();
     let dt = BigNumber.from(elapsedTime * multiplier) * tickspeed;
-    let bonus = theory.publicationMultiplier;
 
     localDeltaTime = dt;
 
@@ -736,7 +839,7 @@ var tick = (elapsedTime, multiplier) => {
 
         Object.keys(autobuyerConfiguration).forEach(key => {
             const value = autobuyerConfiguration[key];
-            if (!value.enabled) return;
+            if (!autobuyerConfigurationBuyingConditions[key]()) return;
 
             const cooldown_bulk = autobuyerConfigurationCooldown[key]();
             value.autobuyTimer = Math.min(value.autobuyTimer - autobuyDt, cooldown_bulk[0]);
@@ -755,6 +858,11 @@ var tick = (elapsedTime, multiplier) => {
 
     if (conjectureActiveData.id !== -1 && currency.value >= conjectures[conjectureActiveData.id].goal(conjectureActiveData.difficulty) && conjecturesHighestCompletedDifficulties[conjectureActiveData.id] < conjectures[conjectureActiveData.id].maxDifficulty) {
         conjecturesHighestCompletedDifficulties[conjectureActiveData.id] = conjectureActiveData.difficulty;
+        onGammaAdjustmentReset(true);
+    }
+
+    let autoGamma = gammaAutoMathExpression.evaluate(mathExpressionGetVariables);
+    if (gammaAutoEnabled && (gammaAutoMode === AutoResetMode.RATIO && getGammaPending(gammaMaxRho) / gammaCurrency.value.max(BigNumber.ONE) >= gammaAutoRatio || gammaAutoMode === AutoResetMode.EXPRESSION && autoGamma === BigNumber.ONE)) {
         onGammaAdjustmentReset(false);
     }
 
@@ -768,6 +876,7 @@ var onGammaAdjustmentReset = (soft) => {
     const dgamma = getGammaPending();
     if (dgamma > 0) {
         gammaCurrency.value += dgamma;
+        publicationMaxGamma = publicationMaxGamma.max(gammaCurrency.value);
     }
     if (!soft) {
         gammaResets++;
@@ -804,9 +913,26 @@ var onGammaAdjustmentReset = (soft) => {
     }
     conjectureActiveData.id = -1;
     conjectureActiveData.difficulty = -1;
+
+    gammaAutoMathExpression.reset();
 };
 
-var postPublish = () => {
+var onPublicationReset = (soft) => {
+    onGammaAdjustmentReset(true);
+
+    gammaMaxRhoLast = BigNumber.ZERO;
+    gammaCurrency.value = BigNumber.ZERO;
+    publicationMaxGamma = BigNumber.ZERO;
+    if (!soft) {
+        publicationResets++;
+        publicationTauPublished = theory.tau.max(publicationTauPublished);
+    }
+
+    gammaup_gammaMult.level = gammaup_gammaTimeMult.level = gammaup_gammaTickspeed.level = gammaup_gammaDQ2Factor.level = gammaup_gammaQDecay.level = gammaup_gammaGainExp.level = gammaup_gammaDQ1Scaling.level = 0;
+    if (milestone_keepConjCompletions.level > 0) conjecturesHighestCompletedDifficulties[0] = 0;
+    if (milestone_keepConjCompletions.level > 1) conjecturesHighestCompletedDifficulties[1] = 0;
+    if (milestone_keepConjCompletions.level > 2) conjecturesHighestCompletedDifficulties[2] = 0;
+    if (milestone_keepConjCompletions.level > 3) conjecturesHighestCompletedDifficulties[3] = 0;
 };
 
 var canResetStage = () => gammaResets < 1 && gammaMaxRho < 1000 || conjectureActiveData.id > -1;
@@ -878,7 +1004,538 @@ const gammaResetMenuFrame = createImageBtn({
     horizontalOptions: LayoutOptions.START,
     verticalOptions: LayoutOptions.START,
     isVisible: () => gammaResets > 0 || gammaMaxRho >= 1000,
-}, () => createGammaResetMenu().show(), () => true, gammaResetImage);
+}, () => gammaResetMenuPopup.show(), () => true, gammaResetImage);
+
+const gammaAutoResetToggle = ui.createSwitch({
+    row: 1,
+    horizontalOptions: LayoutOptions.CENTER,
+    anchorY: 0,
+    isToggled: gammaAutoEnabled,
+    onToggled: () => {
+        gammaAutoEnabled = gammaAutoResetToggle.isToggled;
+    },
+});
+const gammaResetMenuPopup = ui.createPopup({
+    isPeekable: true,
+    title: `Gamma Adjustment`,
+    content: ui.createStackLayout({
+        children: [
+            ui.createLatexLabel({
+                horizontalTextAlignment: TextAlignment.CENTER,
+                text: `After you perform Gamma Adjustment Reset, you will have:`,
+            }),
+            ui.createGrid({
+                rowDefinitions: ["*", "*"],
+                columnDefinitions: ["*", "*"],
+                children: [
+                    ui.createLatexLabel({
+                        row: 0, column: 0,
+                        horizontalTextAlignment: TextAlignment.CENTER,
+                        text: `$\\rho$`,
+                    }),
+                    ui.createLatexLabel({
+                        row: 1, column: 0,
+                        horizontalTextAlignment: TextAlignment.CENTER,
+                        text: () => `$${BigNumber.ZERO}$`,
+                    }),
+
+                    ui.createLatexLabel({
+                        row: 0, column: 1,
+                        horizontalTextAlignment: TextAlignment.CENTER,
+                        text: `$\\gamma$`,
+                    }),
+                    ui.createLatexLabel({
+                        row: 1, column: 1,
+                        horizontalTextAlignment: TextAlignment.CENTER,
+                        text: () => gammaCurrency !== undefined && `$${gammaCurrency.value + getGammaPending(gammaMaxRho)}$` || ``,
+                    }),
+                ],
+            }),
+            ui.createLatexLabel({
+                horizontalTextAlignment: TextAlignment.CENTER,
+                text: `$q_1$, $q_2$, $q_3$, $q_4$ and respective upgrades are reset.`,
+            }),
+            ui.createLatexLabel({
+                horizontalTextAlignment: TextAlignment.CENTER,
+                text: `You will also leave your current Conjecture.`,
+                isVisible: () => conjectureActiveData.id > -1
+            }),
+            ui.createLatexLabel({
+                horizontalTextAlignment: TextAlignment.CENTER,
+                margin: new Thickness(0, 10, 0, 0),
+                text: `Your $\\bar{\\rho}$ last reset: ${gammaMaxRhoLast}.`,
+                isVisible: () => gammaResets > 0,
+            }),
+            ui.createButton({
+                margin: new Thickness(0, 10, 0, 0),
+                text: `Reset`,
+                onClicked: () => {
+                    gammaResetConfirmationPopup.show();
+                },
+                isVisible: () => autoGamma !== undefined ? autoGamma.level < 1 : true,
+            }),
+            ui.createGrid({
+                columnDefinitions: ["8*", "1*", "1*"],
+                margin: new Thickness(0, 10, 0, 0),
+                children: [
+                    ui.createButton({
+                        column: 0,
+                        text: `Reset`,
+                        onClicked: () => {
+                            gammaResetConfirmationPopup.show();
+                        },
+                    }),
+                    ui.createImage({
+                        column: 1,
+                        horizontalOptions: LayoutOptions.CENTER,
+                        verticalOptions: LayoutOptions.CENTER,
+                        margin: new Thickness(2, 6, 6, 6),
+                        source: ImageSource.SETTINGS,
+                        opacity: 0.6,
+                        onTouched: (e) => {  
+                            if (e.type == TouchType.PRESSED) {
+                                autoGammaPopup.show();
+                            }
+                        },
+                    }),
+                    ui.createStackLayout({
+                        column: 2,
+                        children: [
+                            ui.createLabel({
+                                row: 0,
+                                textColor: Color.TEXT,
+                                fontSize: 16,
+                                widthRequest: 50,
+                                heightRequest: 20,
+                                horizontalTextAlignment: TextAlignment.CENTER,
+                                verticalTextAlignment: TextAlignment.CENTER,
+                                text: `Auto`,
+                            }),
+                            gammaAutoResetToggle,
+                        ],
+                        opacity: () => gammaAutoEnabled ? 1 : 0.4,
+                    }),
+                ],
+                isVisible: () => autoGamma !== undefined ? autoGamma.level > 0 : false,
+            }),
+        ],
+    }),
+});
+const gammaResetConfirmationPopup = ui.createPopup({
+    title: "Gamma Adjustment Reset",
+    content: ui.createStackLayout({
+        children: [
+            ui.createLatexLabel({
+                margin: new Thickness(0, 10, 0, 0),
+                horizontalTextAlignment: TextAlignment.CENTER,
+                text: `You are about to perform a Gamma Adjustment Reset.`,
+            }),
+            ui.createLatexLabel({
+                margin: new Thickness(0, 15, 0, 0),
+                horizontalTextAlignment: TextAlignment.CENTER,
+                text: `Do you want to continue?`,
+            }),
+            ui.createGrid({
+                margin: new Thickness(0, 10, 0, 0),
+                children: [
+                    ui.createButton({
+                        column: 0,
+                        text: "Yes",
+                        onClicked: () => {
+                            onGammaAdjustmentReset(false);
+                            gammaResetConfirmationPopup.hide();
+                            gammaResetMenuPopup.hide();
+                        },
+                    }),
+                    ui.createButton({
+                        column: 1,
+                        text: "No",
+                        onClicked: () => {
+                            gammaResetConfirmationPopup.hide();
+                        },
+                    }),
+                ],
+            }),
+        ],
+    }),
+});
+
+const autoGammaExpressionEntry = ui.createEntry({
+    column: 0,
+    text: gammaAutoExpression,
+    onCompleted: () => {
+        gammaAutoExpression = autoGammaExpressionEntry.text;
+        gammaAutoMathExpression = MathExpression.parse(gammaAutoExpression);
+    },
+});
+const autoGammaPopup = ui.createPopup({
+    title: `Auto-Gamma Adjustment`,
+    content: ui.createStackLayout({
+        children: [
+            ui.createFrame({
+                children: [
+                    ui.createGrid({
+                        rowDefinitions: ["*", "*"],
+                        padding: new Thickness(0, 2, 0, 2),
+                        heightRequest: 50,
+                        children: [
+                            ui.createLabel({
+                                row: 0,
+                                horizontalTextAlignment: TextAlignment.CENTER,
+                                verticalTextAlignment: TextAlignment.CENTER,
+                                fontFamily: FontFamily.CMU_BOLD,
+                                fontSize: 16,
+                                text: `Mode`,
+                            }),
+                            ui.createLabel({
+                                row: 1,
+                                horizontalTextAlignment: TextAlignment.CENTER,
+                                verticalTextAlignment: TextAlignment.CENTER,
+                                fontSize: 16,
+                                margin: new Thickness(0, -10, 0, 0),
+                                text: () => {
+                                    if (gammaAutoMode === AutoResetMode.RATIO) return `Ratio`;
+                                    else if (gammaAutoMode === AutoResetMode.EXPRESSION) return `Math Expression`;
+                                    else return `Unknown`;
+                                },
+                            }),
+                        ],
+                    }),
+                ],
+                onTouched: (e) => {
+                    if (e.type.isReleased()) {
+                        if (gammaAutoMode === AutoResetMode.RATIO) gammaAutoMode = AutoResetMode.EXPRESSION;
+                        else if (gammaAutoMode === AutoResetMode.EXPRESSION) gammaAutoMode = AutoResetMode.RATIO;
+                        else gammaAutoMode = AutoResetMode.RATIO;
+                    }
+                },
+            }),
+
+            ui.createLatexLabel({
+                margin: new Thickness(0, 5, 0, 0),
+                horizontalTextAlignment: TextAlignment.CENTER,
+                text: () => {
+                    if (gammaAutoMode === AutoResetMode.RATIO) return `Set the d$\\gamma$/$\\gamma$ ratio that will trigger a Gamma-Adjustment.`;
+                    else if (gammaAutoMode === AutoResetMode.EXPRESSION) return `Set the condition that will trigger a Gamma-Adjustment.`;
+                    else return `Please report this to the developer.`;
+                },
+            }),
+            (() => {
+                const result = ui.createEntry({
+                    margin: new Thickness(0, 5, 0, 0),
+                    text: `${gammaAutoRatio}`,
+                });
+                result.onCompleted = () => {
+                    let out_result = parseBigNumber(result.text);
+                    if (!out_result) {
+                        result.text = `${gammaAutoRatio}`; return;
+                    }
+                    if (out_result < 0.1) {
+                        const popup = ui.createPopup({
+                            title: `Gamma-Adjustment Ratio`,
+                            content: ui.createStackLayout({ children: [
+                                ui.createLatexLabel({
+                                    margin: new Thickness(0, 20, 0, 0),
+                                    horizontalTextAlignment: TextAlignment.CENTER,
+                                    text: `The ratio must be at least 0.1.`,
+                                }),
+                                ui.createButton({
+                                    margin: new Thickness(0, 20, 0, 0),
+                                    text: `Close`,
+                                    onClicked: () => {
+                                        popup.hide();
+                                    },
+                                }),
+                            ]}),
+                        });
+                        popup.show(); return;
+                    }
+                    gammaAutoRatio = out_result;
+                };
+                return ui.createStackLayout({
+                    children: [
+                        ui.createLatexLabel({
+                            horizontalTextAlignment: TextAlignment.CENTER,
+                            fontSize: 12,
+                            text: () => gammaCurrency !== undefined ? `Current ratio: ${(gammaCurrency.value + getGammaPending(gammaMaxRho)) / gammaCurrency.value.max(BigNumber.ONE)}` : ``,
+                        }),
+                        result,
+                    ],
+                    isVisible: () => gammaAutoMode === AutoResetMode.RATIO,
+                });
+            })(),
+            (() => {
+                const result = autoGammaExpressionEntry;
+                result;
+                return ui.createGrid({
+                    columnDefinitions: ["9*", "1*"],
+                    margin: new Thickness(0, 5, 0, 0),
+                    children: [
+                        result,
+                        ui.createImage({
+                            column: 1,
+                            margin: new Thickness(4),
+                            source: ImageSource.INFO,
+                        }),
+                    ],
+                    isVisible: () => gammaAutoMode === AutoResetMode.EXPRESSION,
+                });
+            })(),
+            ui.createButton({
+                text: `Close`,
+                onClicked: () => {
+                    autoGammaPopup.hide();
+                },
+            }),
+        ],
+    }),
+});
+
+const publishMenuFrame = createImageBtn({
+    row: 0, column: 0,
+    horizontalOptions: LayoutOptions.START,
+    verticalOptions: LayoutOptions.START,
+    opacity: () => canPublish() ? 1 : 0.6,
+    isVisible: () => achievement6 !== undefined && achievement6.isUnlocked,
+}, () => publishMenu !== undefined ? publishMenu.show() : {}, () => true, ImageSource.PUBLISH);
+
+const publishBuyables = [];
+const publishMultiMenu = ui.createPopup({
+    title: `Publications`,
+    content: ui.createStackLayout({
+        children: [
+            ui.createLatexLabel({
+                horizontalTextAlignment: TextAlignment.CENTER,
+                text: () => `Multiplier formula for this theory:`,
+            }),
+            ui.createLatexLabel({
+                horizontalTextAlignment: TextAlignment.CENTER,
+                text: () => `$${getPublicationMultiplierFormula(`\\bar{${theory.latexSymbol}}`)}$`,
+            }),
+            ui.createLatexLabel({
+                horizontalTextAlignment: TextAlignment.CENTER,
+                text: () => `where $\\bar{${theory.latexSymbol}}$ is the value of $${theory.latexSymbol}$ at the last publication.`,
+            }),
+            ui.createButton({
+                text: `Close`,
+                onReleased: () => {
+                    publishMultiMenu.hide();
+                },
+            }),
+        ],
+    }),
+});
+const publishConfirmationPopup = ui.createPopup({
+    title: "Confirmation",
+    content: ui.createStackLayout({
+        children: [
+            ui.createLatexLabel({
+                margin: new Thickness(0, 10, 0, 0),
+                horizontalTextAlignment: TextAlignment.CENTER,
+                text: `You are about to publish.`,
+            }),
+            ui.createLatexLabel({
+                margin: new Thickness(0, 10, 0, 0),
+                horizontalTextAlignment: TextAlignment.CENTER,
+                text: `You will not gain anything.`,
+                isVisible: () => !canPublish(),
+            }),
+            ui.createLatexLabel({
+                margin: new Thickness(0, 15, 0, 0),
+                horizontalTextAlignment: TextAlignment.CENTER,
+                text: `Do you want to continue?`,
+            }),
+            ui.createGrid({
+                margin: new Thickness(0, 10, 0, 0),
+                children: [
+                    ui.createButton({
+                        column: 0,
+                        text: "Yes",
+                        onClicked: () => {
+                            publishConfirmationPopup.hide();
+                            publishMenu.hide();
+                            onPublicationReset(!canPublish());
+                        },
+                    }),
+                    ui.createButton({
+                        column: 1,
+                        text: "No",
+                        onClicked: () => {
+                            publishConfirmationPopup.hide();
+                        },
+                    }),
+                ],
+            }),
+        ],
+    }),
+});
+let publishMilestonesTotalPossible = 0;
+let publishMenu;
+let publishMenuHoldingInfo = false;
+var addPublicationMilestone = (upgrade) => {
+    publishMilestonesTotalPossible += upgrade.maxLevel;
+    publishBuyables.push(ui.createGrid({
+        columnDefinitions: [`*`, `10*`],
+        horizontalOptions: LayoutOptions.FILL_AND_EXPAND,
+        heightRequest: 50,
+        columnSpacing: 0,
+        padding: new Thickness(0),
+        children: [
+            ui.createImage({
+                column: 0,
+                heightRequest: 24,
+                margin: new Thickness(5, 0, 5, 0),
+                source: ImageSource.REFUND,
+                opacity: () => upgrade.level > 0 && upgrade.canBeRefunded(1) ? 0.6 : 0.2,
+                onTouched: (e) => {
+                    if (e.type.isReleased()) {
+                        upgrade.refund(1);
+                    }  
+                },
+            }),
+            ui.createFrame({
+                column: 1,
+                cornerRadius: 0,
+                hasShadow: false,
+                padding: new Thickness(0),
+                children: [
+                    ui.createGrid({
+                        children: [
+                            ui.createLatexLabel({
+                                horizontalOptions: LayoutOptions.START,
+                                horizontalTextAlignment: TextAlignment.START,
+                                verticalTextAlignment: TextAlignment.CENTER,
+                                margin: new Thickness(15, 0, 15, 0),
+                                fontSize: () => !publishMenuHoldingInfo ? 12 : 10,
+                                text: () => !publishMenuHoldingInfo ? upgrade.getDescription(1) : upgrade.getInfo(1),
+                            }),
+                            ui.createLatexLabel({
+                                horizontalTextAlignment: TextAlignment.END,
+                                verticalTextAlignment: TextAlignment.END,
+                                margin: new Thickness(10, 0, 10, 6),
+                                fontSize: 10,
+                                textColor: Color.TEXT_MEDIUM,
+                                text: () => `${upgrade.level}${(upgrade.maxLevel > 0 ? `/${upgrade.maxLevel}` : ``)}`,
+                                isVisible: () => !publishMenuHoldingInfo,
+                            }),
+                        ],
+                        opacity: () => upgrade.level < upgrade.maxLevel ? 1 : 0.4,
+                    }),
+                ],
+                onTouched: (e) => {
+                    if (e.type.isReleased()) {
+                        upgrade.buy(1);
+                    }
+                },
+            }),
+        ],
+    }));
+};
+var initializePublishMenu = () => {
+    publishMenu = ui.createPopup({
+        isPeekable: true,
+        title: `Publications`,
+        content: ui.createStackLayout({
+            children: [
+                ui.createLatexLabel({
+                    margin: new Thickness(0, 4, 0, 0),
+                    horizontalTextAlignment: TextAlignment.CENTER,
+                    fontSize: 14,
+                    text: () => {
+                        if (!canPublish()) return `Reach ${getGammaFromTau(theory.tau)}$\\gamma$ to publish.`;
+                        return `Reset theory upgrades and currencies to multiply your d$\\gamma$ by ${getPublicationMultiplier(theory.tau) / getPublicationMultiplier(publicationTauPublished)}`;
+                    },
+                }),
+                ui.createLatexLabel({
+                    margin: new Thickness(0, 4, 0, 0),
+                    horizontalTextAlignment: TextAlignment.CENTER,
+                    fontSize: 12,
+                    text: () => `Current multiplier: ${getPublicationMultiplier(publicationTauPublished)}`,
+                }),
+                ui.createGrid({
+                    columnDefinitions: ["9*", "1*"],
+                    children: [
+                        ui.createFrame({
+                            column: 0,
+                            children: [
+                                ui.createLatexLabel({
+                                    horizontalTextAlignment: TextAlignment.CENTER,
+                                    verticalTextAlignment: TextAlignment.CENTER,
+                                    fontSize: 12,
+                                    text: `Publish`,
+                                }),
+                            ],
+                            opacity: /*() => !canPublish() ? 0.6 : */1,
+                            onTouched: (e) => {
+                                if (e.type.isReleased()) {
+                                    publishConfirmationPopup.show();
+                                }
+                            },
+                        }),
+                        ui.createImage({
+                            column: 1,
+                            source: ImageSource.INFO,
+                            margin: new Thickness(8),
+                            opacity: 0.5,
+                            onTouched: (e) => {
+                                if (e.type.isReleased()) {
+                                    publishMultiMenu.show();
+                                }
+                            },
+                        }),
+                    ],
+                }),
+
+                ui.createBox({
+                    heightRequest: 1,
+                }),
+
+                ui.createLabel({
+                    horizontalTextAlignment: TextAlignment.CENTER,
+                    fontSize: 24,
+                    fontFamily: FontFamily.CMU_BOLD,
+                    text: `Milestones`,
+                }),
+                ui.createLatexLabel({
+                    margin: new Thickness(0, 4, 0, 0),
+                    horizontalTextAlignment: TextAlignment.CENTER,
+                    fontSize: 14,
+                    text: () => {
+                        if (theory.milestonesTotal === publishMilestonesTotalPossible) {
+                            return `You reached the highest milestone!`;
+                        }
+                        return `Reach the next milestone ($${getGammaFromTau(theory.nextMilestone)} \\gamma$) to get an upgrade.`;
+                    },
+                }),
+                ui.createGrid({
+                    children: [
+                        ui.createLatexLabel({
+                            horizontalTextAlignment: TextAlignment.CENTER,
+                            verticalTextAlignment: TextAlignment.CENTER,
+                            fontSize: 12,
+                            text: () => `Upgrades left: ${theory.milestonesUnused}`,
+                        }),
+                        ui.createImage({
+                            horizontalOptions: LayoutOptions.END,
+                            verticalOptions: LayoutOptions.CENTER,
+                            source: ImageSource.INFO,
+                            margin: new Thickness(8),
+                            opacity: 0.5,
+                            widthRequest: 25,
+                            onTouched: (e) => {
+                                publishMenuHoldingInfo = true;
+                                if (e.type.isReleased()) {
+                                    publishMenuHoldingInfo = false;
+                                }
+                            },
+                        }),
+                    ],
+                }),
+                ui.createScrollView({ content: ui.createStackLayout({ children: publishBuyables, }), }),
+            ],
+        }),
+    });
+};
 
 var getPrimaryEquation = () => {
     let result = `\\begin{array}{}`;
@@ -901,6 +1558,9 @@ var getPrimaryEquation = () => {
     }
     else if (stage === 1) {
         let base = `\\left( \\frac{\\bar{\\rho}}{${getGammaGainRhoThresholdLatex()}} \\right)^{${getGammaGainScalingLatex()}}`;
+        if (publicationResets > 0) {
+            base = `\\Pi ${base}`;
+        }
         if (achievement3.isUnlocked) {
             base = `2 ${base}`;
         }
@@ -1108,6 +1768,17 @@ var getEquationOverlay = () => {
                             gammaResetMenuFrame,
                         ],
                     }),
+                    ui.createGrid({
+                        row: 0, column: 0,
+                        margin: new Thickness(4),
+                        horizontalOptions: LayoutOptions.END,
+                        verticalOptions: LayoutOptions.START,
+                        inputTransparent: true,
+                        cascadeInputTransparent: false,
+                        children: [
+                            publishMenuFrame,
+                        ],
+                    }),
                 ],
             }),
             ui.createGrid({
@@ -1129,118 +1800,6 @@ var getEquationOverlay = () => {
             }),
         ],
     });
-};
-
-var createGammaResetMenu = () => {
-    let resetButton = ui.createButton({
-        margin: new Thickness(0, 10, 0, 0),
-        text: `Reset`,
-        onClicked: () => {
-            let yesButton = ui.createButton({
-                column: 0,
-                text: "Yes",
-            });
-
-            let noButton = ui.createButton({
-                column: 1,
-                text: "No",
-            });
-
-            let confirmationPopup = ui.createPopup({
-                title: "Gamma Adjustment Reset",
-                content: ui.createStackLayout({
-                    children: [
-                        ui.createLatexLabel({
-                            margin: new Thickness(0, 10, 0, 0),
-                            horizontalTextAlignment: TextAlignment.CENTER,
-                            text: `You are about to perform a Gamma Adjustment Reset.`,
-                        }),
-                        ui.createLatexLabel({
-                            margin: new Thickness(0, 15, 0, 0),
-                            horizontalTextAlignment: TextAlignment.CENTER,
-                            text: `Do you want to continue?`,
-                        }),
-                        ui.createGrid({
-                            margin: new Thickness(0, 10, 0, 0),
-                            children: [
-                                yesButton,
-                                noButton,
-                            ],
-                        }),
-                    ],
-                }),
-            });
-
-            yesButton.onClicked = () => {
-                onGammaAdjustmentReset(false);
-                confirmationPopup.hide();
-                popup.hide();
-            };
-            noButton.onClicked = () => confirmationPopup.hide();
-
-            confirmationPopup.show();
-        },
-    });
-
-    let resetChildren = [
-        ui.createLatexLabel({
-            horizontalTextAlignment: TextAlignment.CENTER,
-            text: `After you perform Gamma Adjustment Reset, you will have:`,
-        }),
-        ui.createGrid({
-            rowDefinitions: ["*", "*"],
-            columnDefinitions: ["*", "*"],
-            children: [
-                ui.createLatexLabel({
-                    row: 0, column: 0,
-                    horizontalTextAlignment: TextAlignment.CENTER,
-                    text: `$\\rho$`,
-                }),
-                ui.createLatexLabel({
-                    row: 1, column: 0,
-                    horizontalTextAlignment: TextAlignment.CENTER,
-                    text: () => `$${BigNumber.ZERO}$`,
-                }),
-
-                ui.createLatexLabel({
-                    row: 0, column: 1,
-                    horizontalTextAlignment: TextAlignment.CENTER,
-                    text: `$\\gamma$`,
-                }),
-                ui.createLatexLabel({
-                    row: 1, column: 1,
-                    horizontalTextAlignment: TextAlignment.CENTER,
-                    text: () => `$${gammaCurrency.value + getGammaPending(gammaMaxRho)}$`,
-                }),
-            ],
-        }),
-        ui.createLatexLabel({
-            horizontalTextAlignment: TextAlignment.CENTER,
-            text: `$q_1$, $q_2$, $q_3$, $q_4$ and respective upgrades are reset.`,
-        }),
-        ui.createLatexLabel({
-            horizontalTextAlignment: TextAlignment.CENTER,
-            text: `You will also leave your current Conjecture.`,
-            isVisible: () => conjectureActiveData.id > -1
-        }),
-        ui.createLatexLabel({
-            horizontalTextAlignment: TextAlignment.CENTER,
-            margin: new Thickness(0, 10, 0, 0),
-            text: `Your $\\bar{\\rho}$ last reset: ${gammaMaxRhoLast}.`,
-            isVisible: () => gammaResets > 0,
-        }),
-        resetButton,
-    ];
-
-    let popup = ui.createPopup({
-        isPeekable: true,
-        title: `Gamma Adjustment`,
-        content: ui.createStackLayout({
-            children: resetChildren,
-        }),
-    });
-
-    return popup;
 };
 
 let _conjecturesMenu;
@@ -1369,7 +1928,7 @@ var goToPreviousStage = () => {
 };
 
 var canGoToNextStage = () => {
-    if (stage < 1 && gammaResets > 0) {
+    if (stage < 1 && (gammaResets > 0 || publicationResets > 0)) {
         return true;
     } else {
         return stage < 0;
@@ -1381,10 +1940,6 @@ var goToNextStage = () => {
     updateAvailability();
 };
 
-var isCurrencyVisible = (index) => index === 0;
-var getTau = () => achievement6.isUnlocked ? gammaCurrency.value.pow(0.4) : BigNumber.ZERO;
-var getPublicationMultiplier = (tau) => BigNumber.ONE;
-var getPublicationMultiplierFormula = (symbol) => `\\Pi = 1`;
 var get2DGraphValue = () => currency.value.sign * (BigNumber.ONE + currency.value.abs()).log10().toNumber();
 
 //
@@ -1408,7 +1963,7 @@ var getGammaPending = (rho = gammaMaxRho) => {
         result *= 2;
     }
 
-    return result;
+    return result * getPublicationMultiplier(publicationTauPublished);
 };
 var getGammaUpgGammaMult = (level = gammaup_gammaMult.level) => BigNumber.from(1.8).pow(level);
 var getGammaUpgGammaTimeMult_StepwiseScaling = (level) => Utils.getStepwisePowerSum(level, 2, 10, 0);
@@ -1424,7 +1979,7 @@ var getGammaUpgGammaDQ1Scaling = (level = gammaup_gammaDQ1Scaling.level) => 0.1 
 
 let computeFirstSoftcap = () => {
     let result = 0.8 + conjectures[3].getReward(conjecturesHighestCompletedDifficulties[3]);
-    if (conjectureActiveData.id === 3) result *= 2;
+    if (conjectureActiveData.id === 3) result /= 2;
     return result;
 };
 
@@ -1444,12 +1999,14 @@ var productionSoftcapInverse = (x) => {
 
 let calculateQCap = (dq, qDecay) => {
     let result = qDecay * dq;
-    if (result >= BigNumber.ONE) {
-        let softcap = computeFirstSoftcap();
-        let softcapReciprocal = 1 / softcap;
-        let initialThreshold = BigNumber.ONE;
+
+    let softcap = computeFirstSoftcap();
+    let softcapReciprocal = 1 / softcap;
+    let initialThreshold = BigNumber.ONE;
+    if (result >= initialThreshold) {
         result = (dq / (initialThreshold * (((1 + 1 / qDecay) / initialThreshold).pow(softcapReciprocal) - (1 / initialThreshold).pow(softcapReciprocal)))).pow(softcap);
     }
+
     return result;
 };
 
@@ -1467,3 +2024,15 @@ var calculateXDxSoftcapped = (x, dx, initialThreshold = BigNumber.ONE, apply = [
 };
 
 init();
+
+var mathExpressionGetVariables = (s) => {
+    switch (s) {
+        case `rho`: { return currency.value; }
+        case `rhobar`: { return gammaMaxRho; }
+        case `prhobar`: { return gammaMaxRhoLast; }
+        case `gamma`: { return gammaCurrency.value; }
+        case `dgamma`: { return getGammaPending(gammaMaxRho); }
+        case `t`: { return t; }
+    }
+    return null;
+};
