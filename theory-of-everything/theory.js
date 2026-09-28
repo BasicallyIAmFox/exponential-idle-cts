@@ -612,8 +612,8 @@ var init = () => {
         8, // auto gamma
         9, 10, 11, 12, 13, 14, 15, // gamma auto buyers
         16, 17, 18, 20, // conjecture keeping
-    ];
-    theory.setMilestoneCost(new CustomCost((lvl) => tauRate / 0.4 * BigNumber.from(milestoneArray[Math.min(lvl, milestoneArray.length - 1)])));
+    ].map(value => value / 0.4);
+    theory.setMilestoneCost(new CustomCost((lvl) => tauRate * BigNumber.from(milestoneArray[Math.min(lvl, milestoneArray.length - 1)])));
     {
         autoGamma = theory.createMilestoneUpgrade(0, 1);
         autoGamma.description = `Auto-Gamma`;
@@ -632,7 +632,7 @@ var init = () => {
         addPublicationMilestone(milestone_autoGammaUpBuyer);
     }
     {
-        let getDesc = (level) => `Keep Conjecture ${Math.min(level, 4)} completions on Publication`;
+        let getDesc = (level) => `Keep Conjecture ${Math.min(level + 1, 4)} completions on Publication`;
         let getInfo = (level) => {
             if (level === 0) return `Keep Conjecture 1 completions on Publication`;
             return `Keep Conjecture 1-${level} completions on Publication`;
@@ -929,10 +929,10 @@ var onPublicationReset = (soft) => {
     }
 
     gammaup_gammaMult.level = gammaup_gammaTimeMult.level = gammaup_gammaTickspeed.level = gammaup_gammaDQ2Factor.level = gammaup_gammaQDecay.level = gammaup_gammaGainExp.level = gammaup_gammaDQ1Scaling.level = 0;
-    if (milestone_keepConjCompletions.level > 0) conjecturesHighestCompletedDifficulties[0] = 0;
-    if (milestone_keepConjCompletions.level > 1) conjecturesHighestCompletedDifficulties[1] = 0;
-    if (milestone_keepConjCompletions.level > 2) conjecturesHighestCompletedDifficulties[2] = 0;
-    if (milestone_keepConjCompletions.level > 3) conjecturesHighestCompletedDifficulties[3] = 0;
+    if (milestone_keepConjCompletions.level < 1) conjecturesHighestCompletedDifficulties[0] = 0;
+    if (milestone_keepConjCompletions.level < 2) conjecturesHighestCompletedDifficulties[1] = 0;
+    if (milestone_keepConjCompletions.level < 3) conjecturesHighestCompletedDifficulties[2] = 0;
+    if (milestone_keepConjCompletions.level < 4) conjecturesHighestCompletedDifficulties[3] = 0;
 };
 
 var canResetStage = () => gammaResets < 1 && gammaMaxRho < 1000 || conjectureActiveData.id > -1;
