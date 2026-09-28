@@ -1064,7 +1064,7 @@ const gammaResetMenuPopup = ui.createPopup({
             ui.createLatexLabel({
                 horizontalTextAlignment: TextAlignment.CENTER,
                 margin: new Thickness(0, 10, 0, 0),
-                text: `Your $\\bar{\\rho}$ last reset: ${gammaMaxRhoLast}.`,
+                text: () => `Your $\\bar{\\rho}$ last reset: ${gammaMaxRhoLast}.`,
                 isVisible: () => gammaResets > 0,
             }),
             ui.createButton({
