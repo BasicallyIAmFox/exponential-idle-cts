@@ -275,13 +275,13 @@ var autobuyerConfigurationCooldown = {
     ["q2"]: () => [2 - 0.1 * autobuyerDQ2Rate.level, autobuyerDQ2Bulk.level + 1],
     ["q3"]: () => [2 - 0.1 * autobuyerDQ3Rate.level, autobuyerDQ3Bulk.level + 1],
     ["q4"]: () => [2 - 0.1 * autobuyerDQ4Rate.level, autobuyerDQ4Bulk.level + 1],
-    ["gamma1"]: () => [1, 1],
-    ["gamma2"]: () => [1, 1],
-    ["gamma3"]: () => [1, 1],
-    ["gamma4"]: () => [1, 1],
-    ["gamma5"]: () => [1, 1],
-    ["gamma6"]: () => [1, 1],
-    ["gamma7"]: () => [1, 1],
+    ["gamma1"]: () => [1, -1],
+    ["gamma2"]: () => [1, -1],
+    ["gamma3"]: () => [1, -1],
+    ["gamma4"]: () => [1, -1],
+    ["gamma5"]: () => [1, -1],
+    ["gamma6"]: () => [1, -1],
+    ["gamma7"]: () => [1, -1],
 };
 
 // Stolen from MF
@@ -398,7 +398,7 @@ var init = () => {
         gammaup_gammaMult.getDescription = (_) => Utils.getMath(getDesc(gammaup_gammaMult.level));
         gammaup_gammaMult.getInfo = (amount) => Utils.getMathTo(getInfo(gammaup_gammaMult.level), getInfo(gammaup_gammaMult.level + amount));
         autobuyerConfigurationUpgradeMapper["gamma1"] = gammaup_gammaMult;
-        autobuyerConfigurationBuyingConditions["gamma1"] = () => milestone_autoGammaUpBuyer.level > 6;
+        autobuyerConfigurationBuyingConditions["gamma1"] = () => milestone_autoGammaUpBuyer.level > 0;
     }
     {
         let getDesc = (level) => {
@@ -415,7 +415,7 @@ var init = () => {
         gammaup_gammaTimeMult.getDescription = (_) => Utils.getMath(getDesc(gammaup_gammaTimeMult.level));
         gammaup_gammaTimeMult.getInfo = (amount) => Utils.getMathTo(getInfo(gammaup_gammaTimeMult.level), getInfo(gammaup_gammaTimeMult.level + amount));
         autobuyerConfigurationUpgradeMapper["gamma2"] = gammaup_gammaTimeMult;
-        autobuyerConfigurationBuyingConditions["gamma2"] = () => milestone_autoGammaUpBuyer.level > 5;
+        autobuyerConfigurationBuyingConditions["gamma2"] = () => milestone_autoGammaUpBuyer.level > 1;
     }
     {
         let getDesc = (level) => {
@@ -433,7 +433,7 @@ var init = () => {
         gammaup_gammaTickspeed.getInfo = (amount) => Utils.getMathTo(getInfo(gammaup_gammaTickspeed.level), getInfo(gammaup_gammaTickspeed.level + amount));
         gammaup_gammaTickspeed.maxLevel = 5;
         autobuyerConfigurationUpgradeMapper["gamma3"] = gammaup_gammaTickspeed;
-        autobuyerConfigurationBuyingConditions["gamma3"] = () => milestone_autoGammaUpBuyer.level > 4;
+        autobuyerConfigurationBuyingConditions["gamma3"] = () => milestone_autoGammaUpBuyer.level > 2;
     }
     {
         let getDesc = (level) => {
@@ -469,7 +469,7 @@ var init = () => {
         gammaup_gammaQDecay.getInfo = (amount) => Utils.getMathTo(getInfo(gammaup_gammaQDecay.level), getInfo(gammaup_gammaQDecay.level + amount));
         gammaup_gammaQDecay.maxLevel = 5;
         autobuyerConfigurationUpgradeMapper["gamma5"] = gammaup_gammaQDecay;
-        autobuyerConfigurationBuyingConditions["gamma5"] = () => milestone_autoGammaUpBuyer.level > 2;
+        autobuyerConfigurationBuyingConditions["gamma5"] = () => milestone_autoGammaUpBuyer.level > 4;
     }
     {
         let getDesc = (level) => `\\gamma_6 = ${BigNumber.from(0.04 * level)}`;
@@ -479,7 +479,7 @@ var init = () => {
         gammaup_gammaGainExp.getInfo = (amount) => Utils.getMathTo(getInfo(gammaup_gammaGainExp.level), getInfo(gammaup_gammaGainExp.level + amount));
         gammaup_gammaGainExp.maxLevel = 6;
         autobuyerConfigurationUpgradeMapper["gamma6"] = gammaup_gammaGainExp;
-        autobuyerConfigurationBuyingConditions["gamma6"] = () => milestone_autoGammaUpBuyer.level > 1;
+        autobuyerConfigurationBuyingConditions["gamma6"] = () => milestone_autoGammaUpBuyer.level > 5;
     }
     {
         let getDesc = (level) => {
@@ -497,7 +497,7 @@ var init = () => {
         gammaup_gammaDQ1Scaling.getInfo = (amount) => Utils.getMathTo(getInfo(gammaup_gammaDQ1Scaling.level), getInfo(gammaup_gammaDQ1Scaling.level + amount));
         gammaup_gammaDQ1Scaling.maxLevel = 3;
         autobuyerConfigurationUpgradeMapper["gamma7"] = gammaup_gammaDQ1Scaling;
-        autobuyerConfigurationBuyingConditions["gamma7"] = () => milestone_autoGammaUpBuyer.level > 0;
+        autobuyerConfigurationBuyingConditions["gamma7"] = () => milestone_autoGammaUpBuyer.level > 6;
     }
 
     {
@@ -621,10 +621,10 @@ var init = () => {
         addPublicationMilestone(autoGamma);
     }
     {
-        let getDesc = (level) => `Unlock $\\gamma_${Math.max(7 - level, 1)}$ auto-buyer`;
+        let getDesc = (level) => `Unlock $\\gamma_${Math.min(level + 1, 7)}$ auto-buyer`;
         let getInfo = (level) => {
-            if (level === 0) return `Allows to automatically purchase $\\gamma_7$`;
-            return `Allows to automatically purchase from $\\gamma_7$ to $\\gamma_${Math.max(7 - level, 1)}$`;
+            if (level === 0) return `Allows to automatically purchase $\\gamma_1$`;
+            return `Allows to automatically purchase from $\\gamma_1$ to $\\gamma_${Math.min(level + 1, 7)}$`;
         };
         milestone_autoGammaUpBuyer = theory.createMilestoneUpgrade(1, 7);
         milestone_autoGammaUpBuyer.getDescription = (_) => getDesc(milestone_autoGammaUpBuyer.level);
@@ -833,6 +833,11 @@ var tick = (elapsedTime, multiplier) => {
         t += dt;
     }
 
+    if (conjectureActiveData.id !== -1 && currency.value >= conjectures[conjectureActiveData.id].goal(conjectureActiveData.difficulty) && conjecturesHighestCompletedDifficulties[conjectureActiveData.id] < conjectures[conjectureActiveData.id].maxDifficulty) {
+        conjecturesHighestCompletedDifficulties[conjectureActiveData.id] = conjectureActiveData.difficulty;
+        onGammaAdjustmentReset(true);
+    }
+
     autobuyEnabled.isAutoBuyable = false;
     if (autobuyEnabled.level < 1) {
         const autobuyDt = elapsedTime;
@@ -854,11 +859,6 @@ var tick = (elapsedTime, multiplier) => {
                 value.autobuyTimer = cooldown_bulk[0];
             }
         });
-    }
-
-    if (conjectureActiveData.id !== -1 && currency.value >= conjectures[conjectureActiveData.id].goal(conjectureActiveData.difficulty) && conjecturesHighestCompletedDifficulties[conjectureActiveData.id] < conjectures[conjectureActiveData.id].maxDifficulty) {
-        conjecturesHighestCompletedDifficulties[conjectureActiveData.id] = conjectureActiveData.difficulty;
-        onGammaAdjustmentReset(true);
     }
 
     let autoGamma = gammaAutoMathExpression.evaluate(mathExpressionGetVariables);
