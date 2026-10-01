@@ -39,6 +39,9 @@ var tickspeedConsts = [
 ];
 
 var currency;
+var testExpression = ``;
+var testMathExpression = MathExpression.parse(``);
+var testExpressionResult;
 
 // q variables
 const qBaseDecay = 100;
@@ -720,7 +723,10 @@ var updateAvailability = () => {
 };
 
 var getInternalState = () => JSON.stringify({
-    stage,
+    testExpression: testExpression,
+    testMathExpression: testMathExpression.serialize(),
+
+    stage: stage,
     t: t.toBase64String(),
     q1: q1.toBase64String(),
     q2: q2.toBase64String(),
@@ -750,6 +756,12 @@ var setInternalState = (stateStr) => {
     if (!stateStr) return;
     
     let state = JSON.parse(stateStr);
+    if (state.testExpression) {
+        testExpression = state.testExpression;
+        testMathExpression = MathExpression.deserialize(testExpression);
+
+        testExpressionEntry.text = testExpression;
+    }
     if (state.stage) stage = state.stage;
     t = BigNumber.fromBase64String(state.t);
     q1 = BigNumber.fromBase64String(state.q1);
@@ -866,6 +878,8 @@ var tick = (elapsedTime, multiplier) => {
         onGammaAdjustmentReset(false);
     }
 
+    testExpressionResult = testMathExpression.evaluate(mathExpressionGetVariables) || testMathExpression.error;
+
     theory.invalidatePrimaryEquation();
     theory.invalidateSecondaryEquation();
     theory.invalidateTertiaryEquation();
@@ -949,6 +963,163 @@ var resetStage = () => {
 //
 // UI
 //
+
+const testExpressionEntry = ui.createEntry({
+    column: 0,
+    text: testExpression,
+    onCompleted: () => {
+        testExpression = testExpressionEntry.text;
+        testMathExpression = MathExpression.parse(testExpression);
+    },
+});
+const mathExpressionsMenu = ui.createPopup({
+    isPeekable: true,
+    title: `Custom Math Expressions`,
+    content: ui.createStackLayout({ children: [
+        ui.createFrame({ children: [ ui.createScrollView({ margin: new Thickness(8), children: [ ui.createStackLayout({ children: [
+            ui.createLabel({
+                margin: new Thickness(0, 8, 0, 8),
+                horizontalTextAlignment: TextAlignment.CENTER,
+                verticalTextAlignment: TextAlignment.CENTER,
+                fontAttributes: FontAttributes.BOLD,
+                fontSize: 22,
+                text: `Introduction`,
+            }),
+
+            ui.createLatexLabel({
+                text: `Custom Math Expressions are exactly same as the Math Expressions from Auto-Prestige and Auto-Supremacy. The main difference is extra custom variables.`,
+            }),
+
+            ui.createLabel({
+                margin: new Thickness(0, 8, 0, 8),
+                horizontalTextAlignment: TextAlignment.CENTER,
+                verticalTextAlignment: TextAlignment.CENTER,
+                fontAttributes: FontAttributes.BOLD,
+                fontSize: 22,
+                text: `New Parameters`,
+            }),
+            ui.createGrid({
+                columnDefinitions: ["*", "*"],
+                children: [
+                    ui.createLabel({
+                        row: 0, column: 0,
+                        margin: new Thickness(0, 2, 0, 2),
+                        horizontalTextAlignment: TextAlignment.START,
+                        fontAttributes: FontAttributes.BOLD,
+                        text: `Parameter`,
+                    }),
+                    ui.createLabel({
+                        row: 0, column: 1,
+                        margin: new Thickness(0, 2, 0, 2),
+                        horizontalTextAlignment: TextAlignment.END,
+                        fontAttributes: FontAttributes.BOLD,
+                        text: `Description`,
+                    }),
+                    
+                    ui.createLatexLabel({
+                        row: 1, column: 0,
+                        horizontalTextAlignment: TextAlignment.START,
+                        text: `rho`,
+                    }),
+                    ui.createLatexLabel({
+                        row: 1, column: 1,
+                        horizontalTextAlignment: TextAlignment.END,
+                        text: `$\\rho$`,
+                    }),
+                    
+                    ui.createLatexLabel({
+                        row: 2, column: 0,
+                        horizontalTextAlignment: TextAlignment.START,
+                        text: `rhobar`,
+                    }),
+                    ui.createLatexLabel({
+                        row: 2, column: 1,
+                        horizontalTextAlignment: TextAlignment.END,
+                        text: `$\\bar{\\rho}$`,
+                    }),
+                    
+                    ui.createLatexLabel({
+                        row: 3, column: 0,
+                        horizontalTextAlignment: TextAlignment.START,
+                        text: `prhobar`,
+                    }),
+                    ui.createLatexLabel({
+                        row: 3, column: 1,
+                        horizontalTextAlignment: TextAlignment.END,
+                        text: `Previous Value of $\\bar{\\rho}$`,
+                    }),
+                    
+                    ui.createLatexLabel({
+                        row: 4, column: 0,
+                        horizontalTextAlignment: TextAlignment.START,
+                        text: `gamma`,
+                    }),
+                    ui.createLatexLabel({
+                        row: 4, column: 1,
+                        horizontalTextAlignment: TextAlignment.END,
+                        text: `$\\gamma$`,
+                    }),
+                    
+                    ui.createLatexLabel({
+                        row: 5, column: 0,
+                        horizontalTextAlignment: TextAlignment.START,
+                        text: `dgamma`,
+                    }),
+                    ui.createLatexLabel({
+                        row: 5, column: 1,
+                        horizontalTextAlignment: TextAlignment.END,
+                        text: `d$\\gamma$`,
+                    }),
+                    
+                    ui.createLatexLabel({
+                        row: 6, column: 0,
+                        horizontalTextAlignment: TextAlignment.START,
+                        text: `t`,
+                    }),
+                    ui.createLatexLabel({
+                        row: 6, column: 1,
+                        horizontalTextAlignment: TextAlignment.END,
+                        text: `$t$`,
+                    }),
+                ],
+            }),
+        ], }), ], }), ], }),
+
+        ui.createLabel({
+            horizontalTextAlignment: TextAlignment.CENTER,
+            verticalTextAlignment: TextAlignment.CENTER,
+            fontSize: 22,
+            text: `Test an Expression`,
+        }),
+
+        testExpressionEntry,
+
+        ui.createLabel({
+            horizontalTextAlignment: TextAlignment.CENTER,
+            verticalTextAlignment: TextAlignment.CENTER,
+            fontSize: 22,
+            text: () => testExpressionResult !== undefined ? `${testExpressionResult}` : ``,
+            isVisible: () => testExpressionResult !== undefined && testExpressionResult !== null,
+        }),
+
+        ui.createButton({
+            text: `I Understand`,
+            onPressed: () => mathExpressionsMenu.hide(),
+        }),
+    ], }),
+});
+
+var mathExpressionGetVariables = (s) => {
+    switch (s) {
+        case `rho`: { return currency.value; }
+        case `rhobar`: { return gammaMaxRho; }
+        case `prhobar`: { return gammaMaxRhoLast; }
+        case `gamma`: { return gammaCurrency.value; }
+        case `dgamma`: { return getGammaPending(gammaMaxRho); }
+        case `t`: { return t; }
+    }
+    return null;
+};
 
 let getImageSize = (width) => {
     if (width >= 1080) return 48;
@@ -1267,7 +1438,6 @@ const autoGammaPopup = ui.createPopup({
             })(),
             (() => {
                 const result = autoGammaExpressionEntry;
-                result;
                 return ui.createGrid({
                     columnDefinitions: ["9*", "1*"],
                     margin: new Thickness(0, 5, 0, 0),
@@ -1277,6 +1447,11 @@ const autoGammaPopup = ui.createPopup({
                             column: 1,
                             margin: new Thickness(4),
                             source: ImageSource.INFO,
+                            onTouched: (e) => {
+                                if (e.type.isReleased()) {
+                                    mathExpressionsMenu.show();
+                                }
+                            },
                         }),
                     ],
                     isVisible: () => gammaAutoMode === AutoResetMode.EXPRESSION,
@@ -2025,15 +2200,3 @@ var calculateXDxSoftcapped = (x, dx, initialThreshold = BigNumber.ONE, apply = [
 };
 
 init();
-
-var mathExpressionGetVariables = (s) => {
-    switch (s) {
-        case `rho`: { return currency.value; }
-        case `rhobar`: { return gammaMaxRho; }
-        case `prhobar`: { return gammaMaxRhoLast; }
-        case `gamma`: { return gammaCurrency.value; }
-        case `dgamma`: { return getGammaPending(gammaMaxRho); }
-        case `t`: { return t; }
-    }
-    return null;
-};
