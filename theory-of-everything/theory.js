@@ -85,8 +85,12 @@ var gammaResets = 0;
 var gammaMaxRho = BigNumber.ZERO;
 var gammaMaxRhoLast = BigNumber.ZERO;
 var gammaup_gammaMult, gammaup_gammaTimeMult, gammaup_gammaTickspeed, gammaup_gammaDQ2Factor, gammaup_gammaQDecay, gammaup_gammaGainExp, gammaup_gammaDQ1Scaling;
-var getGammaGainScaling = () => gammaGainBaseScaling + getGammaUpgGammaGainExp();
-var getGammaGainScalingLatex = () => `${gammaGainBaseScalingStr} + \\gamma_6`;
+var getGammaGainScaling = () => gammaGainBaseScaling + 0.01 * milestone_dgammaExp.level + getGammaUpgGammaGainExp();
+var getGammaGainScalingLatex = () => {
+    let result = gammaGainBaseScalingStr;
+    if (milestone_dgammaExp.level > 0) result += milestone_dgammaExp.level;
+    return `${result} + \\gamma_6`;
+};
 var getGammaGainRhoThreshold = () => gammaGainRhoThreshold;
 var getGammaGainRhoThresholdLatex = () => gammaGainRhoThresholdStr;
 
@@ -249,8 +253,11 @@ var getPublicationMultiplier = (tau) => tau.pow(0.5).max(BigNumber.ONE);
 var getPublicationMultiplierFormula = (symbol) => `\\Pi = ${symbol}^{0.5}`;
 var canPublish = () => publicationMaxGamma > getGammaFromTau(publicationTauPublished);
 
-var milestone_autoGammaUpBuyer;
+var milestone_q1Exp;
+var milestone_gamma2;
+var milestone_dgammaExp;
 var milestone_keepConjCompletions;
+var milestone_autoGammaUpBuyer;
 
 // Auto-buyer variables
 var autobuyerUnlock, autobuyEnabled;
@@ -405,7 +412,7 @@ var init = () => {
     }
     {
         let getDesc = (level) => {
-            let base = `\\gamma_2 = 1 + ${getGammaUpgGammaTimeMult_StepwiseScaling(level).toString(0)} \\times t^{3} / 10^{6}`;
+            let base = `\\gamma_2 = 1 + ${getGammaUpgGammaTimeMult_StepwiseScaling(level).toString(0)} \\times \\left( t \\text{ } / \\text{ } 10^{2} \\right)^{${getGammaUpgGammaTimeMult_TimeFactorExp().toFixed(0)}}`;
             if (level === 0) base = `\\text{Add } \\gamma_2 \\text{ factor to } \\dot{\\rho} \\\\ ${base}`;
             return base;
         };
@@ -612,11 +619,45 @@ var init = () => {
     }
 
     const milestoneArray = [
-        8, // auto gamma
-        9, 10, 11, 12, 13, 14, 15, // gamma auto buyers
-        16, 17, 18, 20, // conjecture keeping
+        8, 10, 12, 14, // q1 exp
+        16, 18, // dgamma exp
+        20, 22, // gamma2 exp
+        ... [
+            8, // auto gamma
+            9, 10, 11, 12, 13, 14, 15, // gamma auto buyers
+            16, 17, 18, 20, // conjecture keeping
+        ].map(value => value - 8 + 24)
     ].map(value => value / 0.4);
     theory.setMilestoneCost(new CustomCost((lvl) => tauRate * BigNumber.from(milestoneArray[Math.min(lvl, milestoneArray.length - 1)])));
+    {
+        milestone_q1Exp = theory.createMilestoneUpgrade(3, 4);
+        milestone_q1Exp.description = Localization.getUpgradeIncCustomExpDesc(`q_1`, `1`);
+        milestone_q1Exp.info = Localization.getUpgradeIncCustomExpInfo(`q_1`, `1`);
+        addPublicationMilestone(milestone_q1Exp);
+    }
+    {
+        milestone_gamma2 = theory.createMilestoneUpgrade(5, 2);
+        milestone_gamma2.description = `$\\uparrow \\ t \\text{ factor exponent in } \\gamma_2 \\text{ by } 1$`;
+        milestone_gamma2.info = `$\\text{Increases } t \\text{ factor exponent in } \\gamma_2 \\text{ by } 1$`;
+        addPublicationMilestone(milestone_gamma2);
+    }
+    {
+        milestone_dgammaExp = theory.createMilestoneUpgrade(4, 2);
+        milestone_dgammaExp.description = Localization.getUpgradeIncCustomExpDesc(`\\text{d}\\gamma`, `0.01`);
+        milestone_dgammaExp.info = Localization.getUpgradeIncCustomExpInfo(`\\text{d}\\gamma`, `0.01`);
+        addPublicationMilestone(milestone_dgammaExp);
+    }
+    {
+        let getDesc = (level) => `Keep Conjecture ${Math.min(level + 1, 4)} completions`;
+        let getInfo = (level) => {
+            if (level === 0) return `Keep Conjecture 1 completions`;
+            return `Keep Conjecture 1-${level} completions`;
+        };
+        milestone_keepConjCompletions = theory.createMilestoneUpgrade(2, 4);
+        milestone_keepConjCompletions.getDescription = (_) => getDesc(milestone_keepConjCompletions.level);
+        milestone_keepConjCompletions.getInfo = (_) => getInfo(milestone_keepConjCompletions.level);
+        addPublicationMilestone(milestone_keepConjCompletions);
+    }
     {
         autoGamma = theory.createMilestoneUpgrade(0, 1);
         autoGamma.description = `Auto-Gamma`;
@@ -633,17 +674,6 @@ var init = () => {
         milestone_autoGammaUpBuyer.getDescription = (_) => getDesc(milestone_autoGammaUpBuyer.level);
         milestone_autoGammaUpBuyer.getInfo = (_) => getInfo(milestone_autoGammaUpBuyer.level);
         addPublicationMilestone(milestone_autoGammaUpBuyer);
-    }
-    {
-        let getDesc = (level) => `Keep Conjecture ${Math.min(level + 1, 4)} completions`;
-        let getInfo = (level) => {
-            if (level === 0) return `Keep Conjecture 1 completions`;
-            return `Keep Conjecture 1-${level} completions`;
-        };
-        milestone_keepConjCompletions = theory.createMilestoneUpgrade(2, 4);
-        milestone_keepConjCompletions.getDescription = (_) => getDesc(milestone_keepConjCompletions.level);
-        milestone_keepConjCompletions.getInfo = (_) => getInfo(milestone_keepConjCompletions.level);
-        addPublicationMilestone(milestone_keepConjCompletions);
     }
 
     let achievement_category1 = theory.createAchievementCategory(0, "Progression");
@@ -758,7 +788,7 @@ var setInternalState = (stateStr) => {
     let state = JSON.parse(stateStr);
     if (state.testExpression) {
         testExpression = state.testExpression;
-        testMathExpression = MathExpression.deserialize(testExpression);
+        testMathExpression = MathExpression.deserialize(state.testMathExpression);
 
         testExpressionEntry.text = testExpression;
     }
@@ -793,7 +823,7 @@ var setInternalState = (stateStr) => {
 
 var tick = (elapsedTime, multiplier) => {
     let tickspeed = getTickspeed();
-    let dt = BigNumber.from(elapsedTime * multiplier) * tickspeed;
+    let dt = BigNumber.from(elapsedTime * multiplier * 360) * tickspeed;
 
     localDeltaTime = dt;
 
@@ -830,7 +860,7 @@ var tick = (elapsedTime, multiplier) => {
             if (conjectureActiveData.difficulty === 2) drho *= q3;
             if (conjectureActiveData.difficulty === 3) drho *= q4;
         } else {
-            drho *= q1;
+            drho *= q1.pow(getQ1Exp());
             if (conjecturesHighestCompletedDifficulties[2] > 0) drho *= q2.max(BigNumber.ONE);
             if (conjecturesHighestCompletedDifficulties[2] > 1) drho *= q3.max(BigNumber.ONE);
             if (conjecturesHighestCompletedDifficulties[2] > 2) drho *= q4.max(BigNumber.ONE);
@@ -852,7 +882,7 @@ var tick = (elapsedTime, multiplier) => {
 
     autobuyEnabled.isAutoBuyable = false;
     if (autobuyEnabled.level < 1) {
-        const autobuyDt = elapsedTime;
+        const autobuyDt = elapsedTime * 360;
 
         Object.keys(autobuyerConfiguration).forEach(key => {
             const value = autobuyerConfiguration[key];
@@ -1727,6 +1757,9 @@ var getPrimaryEquation = () => {
             rhodot += `q_${conjectureActiveData.difficulty + 1}`;
         } else {
             rhodot += `q_1`;
+            if (milestone_q1Exp.level > 0)
+                rhodot += `^{${getQ1Exp().toFixed(1).replace(`.0`, ``)}}`;
+
             if (conjecturesHighestCompletedDifficulties[2] > 0)
                 rhodot += `\\prod_{i = 2}^{${conjecturesHighestCompletedDifficulties[2] + 1}} \\max \\left( 1, q_i \\right)`;
         }
@@ -2124,6 +2157,7 @@ var get2DGraphValue = () => currency.value.sign * (BigNumber.ONE + currency.valu
 
 var getTn = (tickspeedLevel) => tickspeedLevel + gammaup_gammaTickspeed.level;
 var getTickspeed = (level = getTn(tickspeed.level)) => BigNumber.from(tickspeedConsts[level]);
+var getQ1Exp = () => 1 + 1 * milestone_q1Exp.level;
 var getDQ1 = (level = dq1.level) => Utils.getStepwisePowerSum(level, 2 + getGammaUpgGammaDQ1Scaling(), 9, 0) / 10;
 var getDQ2 = (level = dq2.level) => Utils.getStepwisePowerSum(level, 2, 9, 0) / 10;
 var getDQ3 = (level = dq3.level) => Utils.getStepwisePowerSum(level, 2, 9, 0) / 10;
@@ -2143,7 +2177,8 @@ var getGammaPending = (rho = gammaMaxRho) => {
 };
 var getGammaUpgGammaMult = (level = gammaup_gammaMult.level) => BigNumber.from(1.8).pow(level);
 var getGammaUpgGammaTimeMult_StepwiseScaling = (level) => Utils.getStepwisePowerSum(level, 2, 10, 0);
-var getGammaUpgGammaTimeMult = (level = gammaup_gammaTimeMult.level) => 1 + 1e-6 * getGammaUpgGammaTimeMult_StepwiseScaling(level) * t.pow(3);
+var getGammaUpgGammaTimeMult_TimeFactorExp = () => 3 + milestone_gamma2.level;
+var getGammaUpgGammaTimeMult = (level = gammaup_gammaTimeMult.level) => 1 + getGammaUpgGammaTimeMult_StepwiseScaling(level) * (t / 100).pow(getGammaUpgGammaTimeMult_TimeFactorExp());
 var getGammaUpgGammaDQ2Factor = (level = gammaup_gammaDQ2Factor.level) => BigNumber.from(1.1).pow(level);
 var getGammaUpgGammaQDecay = (level = gammaup_gammaQDecay.level) => BigNumber.from(2 * level);
 var getGammaUpgGammaGainExp = (level = gammaup_gammaGainExp.level) => BigNumber.from(0.04 * level);
