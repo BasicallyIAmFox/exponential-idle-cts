@@ -822,8 +822,9 @@ var setInternalState = (stateStr) => {
 };
 
 var tick = (elapsedTime, multiplier) => {
+    const speedup = 1;
     let tickspeed = getTickspeed();
-    let dt = BigNumber.from(elapsedTime * multiplier * 360) * tickspeed;
+    let dt = BigNumber.from(elapsedTime * multiplier * speedup) * tickspeed;
 
     localDeltaTime = dt;
 
@@ -882,7 +883,7 @@ var tick = (elapsedTime, multiplier) => {
 
     autobuyEnabled.isAutoBuyable = false;
     if (autobuyEnabled.level < 1) {
-        const autobuyDt = elapsedTime * 360;
+        const autobuyDt = elapsedTime * speedup;
 
         Object.keys(autobuyerConfiguration).forEach(key => {
             const value = autobuyerConfiguration[key];
