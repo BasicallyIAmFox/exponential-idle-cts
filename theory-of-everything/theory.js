@@ -882,7 +882,7 @@ var tick = (elapsedTime, multiplier) => {
     }
 
     autobuyEnabled.isAutoBuyable = false;
-    if (autobuyEnabled.level < 1) {
+    if (autobuyEnabled.level < 1 && /* Bug fix: autobuyer takes priority over milestones, so we must skip a tick for milestones to take priority. */ !(theory.milestonesTotal < publishMilestonesTotalPossible && theory.nextMilestone >= theory.tau)) {
         const autobuyDt = elapsedTime * speedup;
 
         Object.keys(autobuyerConfiguration).forEach(key => {
@@ -998,8 +998,8 @@ var resetStage = () => {
 const testExpressionEntry = ui.createEntry({
     column: 0,
     text: testExpression,
-    onCompleted: () => {
-        testExpression = testExpressionEntry.text;
+    onTextChanged: (oldTextValue, newTextValue) => {
+        testExpression = newTextValue;
         testMathExpression = MathExpression.parse(testExpression);
     },
 });
@@ -1366,8 +1366,8 @@ const gammaResetConfirmationPopup = ui.createPopup({
 const autoGammaExpressionEntry = ui.createEntry({
     column: 0,
     text: gammaAutoExpression,
-    onCompleted: () => {
-        gammaAutoExpression = autoGammaExpressionEntry.text;
+    onTextChanged: (oldTextValue, newTextValue) => {
+        gammaAutoExpression = newTextValue;
         gammaAutoMathExpression = MathExpression.parse(gammaAutoExpression);
     },
 });
@@ -1428,8 +1428,8 @@ const autoGammaPopup = ui.createPopup({
                     margin: new Thickness(0, 5, 0, 0),
                     text: `${gammaAutoRatio}`,
                 });
-                result.onCompleted = () => {
-                    let out_result = parseBigNumber(result.text);
+                result.onTextChanged = (oldTextValue, newTextValue) => {
+                    let out_result = parseBigNumber(newTextValue);
                     if (!out_result) {
                         result.text = `${gammaAutoRatio}`; return;
                     }
