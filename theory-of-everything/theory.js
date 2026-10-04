@@ -904,8 +904,8 @@ var tick = (elapsedTime, multiplier) => {
         });
     }
 
-    let autoGamma = gammaAutoMathExpression.evaluate(mathExpressionGetVariables);
-    if (gammaAutoEnabled && (gammaAutoMode === AutoResetMode.RATIO && getGammaPending(gammaMaxRho) / gammaCurrency.value.max(BigNumber.ONE) >= gammaAutoRatio || gammaAutoMode === AutoResetMode.EXPRESSION && autoGamma === BigNumber.ONE)) {
+    let autoGammaResult = gammaAutoMathExpression.evaluate(mathExpressionGetVariables);
+    if (autoGamma.level > 0 && gammaAutoEnabled && (gammaAutoMode === AutoResetMode.RATIO && (gammaCurrency.value + getGammaPending(gammaMaxRho)) / gammaCurrency.value.max(BigNumber.ONE) >= gammaAutoRatio || gammaAutoMode === AutoResetMode.EXPRESSION && autoGammaResult === BigNumber.ONE)) {
         onGammaAdjustmentReset(false);
     }
 
