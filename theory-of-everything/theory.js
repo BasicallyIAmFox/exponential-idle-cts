@@ -882,7 +882,7 @@ var tick = (elapsedTime, multiplier) => {
     }
 
     autobuyEnabled.isAutoBuyable = false;
-    if (autobuyEnabled.level < 1 && /* Bug fix: autobuyer takes priority over milestones, so we must skip a tick for milestones to take priority. */ !(theory.milestonesTotal < publishMilestonesTotalPossible && theory.nextMilestone >= theory.tau)) {
+    if (autobuyEnabled.level < 1 && /* Bug fix: autobuyer takes priority over milestones, so we must skip a tick for milestones to take priority. */ !(achievement6.isUnlocked && theory.milestonesTotal < publishMilestonesTotalPossible && gammaCurrency.value >= getGammaFromTau(theory.nextMilestone))) {
         const autobuyDt = elapsedTime * speedup;
 
         Object.keys(autobuyerConfiguration).forEach(key => {
@@ -2213,10 +2213,9 @@ let calculateQCap = (dq, qDecay) => {
     let result = qDecay * dq;
 
     let softcap = computeFirstSoftcap();
-    let softcapReciprocal = 1 / softcap;
     let initialThreshold = BigNumber.ONE;
     if (result >= initialThreshold) {
-        result = (dq / (initialThreshold * (((1 + 1 / qDecay) / initialThreshold).pow(softcapReciprocal) - (1 / initialThreshold).pow(softcapReciprocal)))).pow(softcap);
+        result = initialThreshold * (dq / initialThreshold).pow(softcap) / Math.expm1(Math.log1p(1 / qDecay) / softcap) ** softcap;
     }
 
     return result;
